@@ -1,0 +1,61 @@
+---
+const { data, limit = 10 } = Astro.props;
+const authors = data.topAuthors.slice(0, limit);
+const max = authors[0]?.commits ?? 1;
+---
+<ol class="maintainers">
+  {authors.map((a, i) => (
+    <li>
+      <span class="rank">{i + 1}</span>
+      <span class="name" title={`${a.name} <${a.email}>`}>{a.name}</span>
+      <span class="bar"><span class="fill" style={`width: ${(a.commits / max) * 100}%`}></span></span>
+      <span class="count">{a.commits}</span>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .maintainers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .maintainers li {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr) 3rem 1.9rem;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.82rem;
+  }
+  .rank {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    color: rgba(0,0,0,0.38);
+    font-size: 0.7rem;
+  }
+  .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bar {
+    background: rgba(0,0,0,0.06);
+    height: 0.45rem;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .fill {
+    display: block;
+    height: 100%;
+    background: #4f94d4;
+    opacity: 0.7;
+  }
+  .count {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8rem;
+    text-align: right;
+    color: rgba(0,0,0,0.72);
+  }
+</style>

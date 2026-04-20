@@ -1,0 +1,458 @@
+---
+import Base from '../layouts/Base.astro';
+import lkmlData from '../../data/lkml.json';
+
+const { threads, _dummy } = lkmlData;
+
+const totalThreads = threads.length;
+const totalMessages = threads.reduce((a, t) => a + t.messageCount, 0);
+const totalParticipants = threads.reduce((a, t) => a + t.participantCount, 0);
+
+// Per-list aggregate
+const byList = {};
+for (const t of threads) {
+  const l = t.list ?? 'unknown';
+  if (!byList[l]) byList[l] = { name: l, threads: 0, messages: 0, participants: 0 };
+  byList[l].threads += 1;
+  byList[l].messages += t.messageCount;
+  byList[l].participants += t.participantCount;
+}
+const listRows = Object.values(byList).sort((a, b) => b.messages - a.messages);
+const maxListMessages = Math.max(1, ...listRows.map(r => r.messages));
+const mostActive = listRows[0];
+
+// List → color (cycle through palette for consistency)
+const LIST_PALETTE = ['#4f94d4', '#ff7a5c', '#4a9d5f', '#c58b2e', '#2b5c8a', '#8f6ed3', '#d46b8f', '#5fa5a5', '#c55050', '#6c757d'];
+const listColor = {};
+listRows.forEach((r, i) => (listColor[r.name] = LIST_PALETTE[i % LIST_PALETTE.length]));
+
+// Gantt: threads as horizontal bars spanning firstPost → lastPost
+const firstTs = Math.min(...threads.map(t => new Date(t.firstPost).getTime()));
+const lastTs  = Math.max(...threads.map(t => new Date(t.lastPost).getTime()));
+const spanMs = Math.max(lastTs - firstTs, 86_400_000); // guard against 0-span
+
+const GW = 880, GH_ROW = 20, GH_PAD_T = 16, GH_PAD_B = 24, GH_PAD_L = 220, GH_PAD_R = 16;
+const GH = GH_PAD_T + GH_PAD_B + threads.length * GH_ROW;
+const innerW = GW - GH_PAD_L - GH_PAD_R;
+
+const sortedThreads = [...threads].sort((a, b) =>
+  new Date(a.firstPost).getTime() - new Date(b.firstPost).getTime()
+);
+
+const tsToX = (ts) => GH_PAD_L + ((ts - firstTs) / spanMs) * innerW;
+
+// Day ticks for gantt bottom
+const dayTicks = [];
+{
+  const start = new Date(firstTs);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(lastTs);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    dayTicks.push({
+      x: tsToX(d.getTime()),
+      label: `${d.getMonth() + 1}/${d.getDate()}`,
+    });
+  }
+}
+
+// Thread table — sorted by most active (messageCount desc)
+const tableThreads = [...threads].sort((a, b) => b.messageCount - a.messageCount);
+
+function fmtDateTime(iso) {
+  return new Date(iso).toISOString().slice(0, 16).replace('T', ' ');
+}
+function truncate(str, n) {
+  return str.length > n ? str.slice(0, n - 1) + '…' : str;
+}
+---
+<Base title="LKML · z-linux.com">
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <h1>LKML · trending threads</h1>
+        <p class="meta">lore.kernel.org archives · {listRows.length} mailing lists · {totalThreads} active threads</p>
+      </div>
+      {_dummy && <span class="dummy-tag">dummy data</span>}
+    </header>
+
+    <section class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">threads</div>
+        <div class="kpi-value">{totalThreads}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">messages</div>
+        <div class="kpi-value">{totalMessages.toLocaleString()}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">participants</div>
+        <div class="kpi-value">{totalParticipants}</div>
+        <div class="kpi-sub">summed across threads</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">most active list</div>
+        <div class="kpi-value mono-sm">{mostActive.name}</div>
+        <div class="kpi-sub">{mostActive.messages} msgs · {mostActive.threads} threads</div>
+      </div>
+    </section>
+
+    <section class="grid-row">
+      <article class="card">
+        <header class="card-head"><h2>By mailing list</h2></header>
+        <ul class="list-bars">
+          {listRows.map(r => (
+            <li>
+              <div class="lb-name">
+                <span class="sq" style={`background:${listColor[r.name]}`}></span>
+                {r.name}
+              </div>
+              <div class="lb-bar">
+                <div class="lb-fill" style={`width:${(r.messages / maxListMessages) * 100}%; background:${listColor[r.name]}`}></div>
+              </div>
+              <div class="lb-count">
+                <strong>{r.messages}</strong>
+                <span class="muted"> msgs</span>
+              </div>
+              <div class="lb-threads muted">{r.threads} thr</div>
+            </li>
+          ))}
+        </ul>
+      </article>
+
+      <article class="card">
+        <header class="card-head"><h2>Velocity</h2></header>
+        <dl class="facts">
+          <div><dt>avg messages / thread</dt><dd>{(totalMessages / totalThreads).toFixed(1)}</dd></div>
+          <div><dt>avg participants / thread</dt><dd>{(totalParticipants / totalThreads).toFixed(1)}</dd></div>
+          <div><dt>max replies</dt><dd>{Math.max(...threads.map(t => t.messageCount))}</dd></div>
+          <div><dt>window</dt><dd>{new Date(firstTs).toISOString().slice(0, 10)} → {new Date(lastTs).toISOString().slice(0, 10)}</dd></div>
+          <div><dt>avg lifespan</dt><dd>{(threads.reduce((a, t) => a + (new Date(t.lastPost) - new Date(t.firstPost)), 0) / threads.length / 86_400_000).toFixed(1)}d</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>Thread lifespan</h2>
+        <span class="head-sub">first post → last post · sorted chronologically</span>
+      </header>
+      <svg viewBox={`0 0 ${GW} ${GH}`} class="gantt" preserveAspectRatio="none" role="img" aria-label="Thread lifespan timeline">
+        {dayTicks.map(t => (
+          <line
+            x1={t.x} x2={t.x}
+            y1={GH_PAD_T - 4}
+            y2={GH - GH_PAD_B}
+            stroke="rgba(0,0,0,0.04)"
+          />
+        ))}
+        {dayTicks.map((t, i) => i % 2 === 0 && (
+          <text
+            x={t.x}
+            y={GH - GH_PAD_B + 14}
+            text-anchor="middle"
+            font-family="ui-monospace, SFMono-Regular, monospace"
+            font-size="9"
+            fill="rgba(0,0,0,0.42)"
+          >{t.label}</text>
+        ))}
+        {sortedThreads.map((t, i) => {
+          const x1 = tsToX(new Date(t.firstPost).getTime());
+          const x2 = tsToX(new Date(t.lastPost).getTime());
+          const y = GH_PAD_T + i * GH_ROW + GH_ROW / 2;
+          const barH = 10;
+          const width = Math.max(4, x2 - x1);
+          return (
+            <>
+              <text
+                x={GH_PAD_L - 8}
+                y={y + 3}
+                text-anchor="end"
+                font-family="ui-monospace, SFMono-Regular, monospace"
+                font-size="10"
+                fill="rgba(0,0,0,0.7)"
+              >{truncate(t.subject, 34)}</text>
+              <rect
+                x={x1}
+                y={y - barH / 2}
+                width={width}
+                height={barH}
+                rx="2"
+                fill={listColor[t.list]}
+                opacity="0.78"
+              >
+                <title>{t.subject} · {t.list} · {t.messageCount} messages · {t.firstPost.slice(0,10)} → {t.lastPost.slice(0,10)}</title>
+              </rect>
+              <text
+                x={x2 + 5}
+                y={y + 3}
+                font-family="ui-monospace, SFMono-Regular, monospace"
+                font-size="9"
+                fill="rgba(0,0,0,0.55)"
+              >{t.messageCount}</text>
+            </>
+          );
+        })}
+      </svg>
+    </article>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>All threads</h2>
+        <span class="head-sub">sorted by reply count</span>
+      </header>
+      <table class="thread-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>List</th>
+            <th>Author</th>
+            <th class="num">Replies</th>
+            <th class="num">Participants</th>
+            <th>First</th>
+            <th>Last</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tableThreads.map(t => (
+            <tr>
+              <td class="subj">
+                {t.url ? <a href={t.url} target="_blank" rel="noopener">{t.subject}</a> : t.subject}
+              </td>
+              <td class="mono muted">
+                <span class="sq-inline" style={`background:${listColor[t.list]}`}></span>
+                {t.list}
+              </td>
+              <td class="mono muted">{t.author}</td>
+              <td class="num mono"><strong>{t.messageCount}</strong></td>
+              <td class="num mono muted">{t.participantCount}</td>
+              <td class="mono muted">{fmtDateTime(t.firstPost)}</td>
+              <td class="mono muted">{fmtDateTime(t.lastPost)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell { max-width: 80rem; padding: 1.25rem 1.5rem 2.5rem; }
+  .page-head {
+    margin-bottom: 1.2rem;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.3rem; font-weight: 500; margin: 0;
+  }
+  .meta {
+    margin: 0.2rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.5);
+  }
+  .dummy-tag {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(197,139,46,0.13);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: center;
+  }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1rem 0.95rem;
+    display: flex; flex-direction: column; gap: 0.22rem;
+    position: relative; overflow: hidden; min-width: 0;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px; background: #4f94d4;
+  }
+  .kpi-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(0,0,0,0.55);
+  }
+  .kpi-value {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1.08;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .kpi-value.mono-sm { font-size: 1rem; }
+  .kpi-sub {
+    font-size: 0.74rem;
+    color: rgba(0,0,0,0.55);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.3rem;
+    margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500; margin: 0;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .head-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.45);
+  }
+
+  .grid-row {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .list-bars {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .list-bars li {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr) 3.2rem 2.8rem;
+    align-items: center; gap: 0.6rem;
+    font-size: 0.82rem;
+  }
+  .lb-name {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sq { width: 0.55rem; height: 0.55rem; border-radius: 1px; flex-shrink: 0; }
+  .lb-bar {
+    height: 0.5rem;
+    background: rgba(0,0,0,0.05);
+    border-radius: 2px; overflow: hidden;
+  }
+  .lb-fill {
+    height: 100%; opacity: 0.78;
+  }
+  .lb-count {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8rem;
+    text-align: right;
+  }
+  .lb-threads {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+    text-align: right;
+  }
+  .muted { color: rgba(0,0,0,0.55); }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    margin: 0;
+  }
+  .facts div {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 0.35rem;
+  }
+  .facts dt {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem;
+    color: rgba(0,0,0,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+  }
+  .facts dd {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    margin: 0;
+    text-align: right;
+  }
+
+  .gantt {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .thread-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .thread-table th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(0,0,0,0.45);
+    text-align: left;
+    padding: 0.4rem 0.6rem 0.4rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    white-space: nowrap;
+  }
+  .thread-table th.num, .thread-table td.num { text-align: right; }
+  .thread-table td {
+    padding: 0.5rem 0.6rem 0.5rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    vertical-align: top;
+  }
+  .thread-table tr:last-child td { border-bottom: none; }
+  .thread-table .mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+  }
+  .thread-table .subj {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    max-width: 30rem;
+    line-height: 1.35;
+  }
+  .thread-table a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+  }
+  .thread-table a:hover {
+    color: #2b5c8a;
+    border-bottom-style: solid;
+  }
+  .sq-inline {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 1px;
+    margin-right: 0.35rem;
+  }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-row { grid-template-columns: 1fr; }
+    .list-bars li { grid-template-columns: 7rem 1fr 3rem 2.5rem; }
+  }
+</style>

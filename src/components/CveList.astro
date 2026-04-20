@@ -1,0 +1,84 @@
+---
+const { data, limit = 8 } = Astro.props;
+const cves = data.cves.slice(0, limit);
+---
+<ul class="cves">
+  {cves.map(c => (
+    <li>
+      <span class={`sev sev-${c.severity}`}>{c.severity}</span>
+      <div class="body">
+        <div class="id-row">
+          <span class="id">{c.id}</span>
+          <a class="sub" href={`/subsystem/${(c.subsystem ?? '').split('/')[0]}/`}>{c.subsystem}</a>
+        </div>
+        <div class="summary" title={c.summary}>{c.summary}</div>
+      </div>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .cves {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .cves li {
+    display: grid;
+    grid-template-columns: 3.3rem minmax(0, 1fr);
+    gap: 0.6rem;
+    align-items: flex-start;
+  }
+  .sev {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.22rem 0.35rem;
+    border-radius: 3px;
+    text-align: center;
+    line-height: 1;
+    margin-top: 0.15rem;
+  }
+  .sev-high   { background: rgba(232,91,74,0.14);  color: #9a2c1d; }
+  .sev-medium { background: rgba(197,139,46,0.17); color: #8b6620; }
+  .sev-low    { background: rgba(108,117,125,0.14); color: #4b5158; }
+  .body { min-width: 0; }
+  .id-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    min-width: 0;
+  }
+  .id {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  .sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    text-decoration: none;
+  }
+  .sub:hover { color: #2b5c8a; text-decoration: underline; }
+  .summary {
+    font-size: 0.78rem;
+    color: rgba(0,0,0,0.62);
+    line-height: 1.35;
+    margin-top: 0.15rem;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+</style>

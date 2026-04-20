@@ -1,0 +1,92 @@
+---
+const { data, limit = 6 } = Astro.props;
+const threads = [...data.threads]
+  .sort((a, b) => b.messageCount - a.messageCount)
+  .slice(0, limit);
+---
+<ol class="threads">
+  {threads.map(t => (
+    <li>
+      <div class="head">
+        <span class="replies">{t.messageCount}</span>
+        <span class="list">{t.list}</span>
+      </div>
+      <a class="subject" href={t.url} target="_blank" rel="noopener">{t.subject}</a>
+      <div class="meta">
+        <span class="author">{t.author}</span>
+        <span class="dot">·</span>
+        <span>{t.participantCount} participants</span>
+      </div>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .threads {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 0.75rem;
+  }
+  .threads li {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 6px;
+    padding: 0.85rem 0.95rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    background: #fff;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+  .replies {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.12rem 0.45rem;
+    background: rgba(79,148,212,0.14);
+    color: #2b5c8a;
+    border-radius: 3px;
+    line-height: 1.2;
+  }
+  .list {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem;
+    color: rgba(0,0,0,0.5);
+    letter-spacing: 0.03em;
+  }
+  .subject {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    color: rgba(0,0,0,0.88);
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .subject:hover {
+    color: #2b5c8a;
+    text-decoration: underline;
+  }
+  .meta {
+    display: flex;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: rgba(0,0,0,0.5);
+  }
+  .dot { opacity: 0.5; }
+  .author {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 10rem;
+  }
+</style>

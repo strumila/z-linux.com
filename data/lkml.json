@@ -1,0 +1,126 @@
+{
+  "_dummy": true,
+  "fetchedAt": "2026-04-18T06:00:00.000Z",
+  "threads": [
+    {
+      "id": "20260416102301.1234-1-peterz@infradead.org",
+      "subject": "[PATCH v5 00/12] sched/eevdf: fairness improvements for bursty workloads",
+      "author": "Peter Zijlstra",
+      "authorEmail": "peterz@infradead.org",
+      "list": "linux-kernel",
+      "url": "https://lore.kernel.org/lkml/20260416102301.1234-1-peterz@infradead.org/",
+      "messageCount": 47,
+      "participantCount": 13,
+      "firstPost": "2026-04-16T10:23:01Z",
+      "lastPost": "2026-04-18T05:47:12Z"
+    },
+    {
+      "id": "20260415184422.89012-1-willy@infradead.org",
+      "subject": "[RFC PATCH 00/24] mm: scalable folio allocator (v3)",
+      "author": "Matthew Wilcox",
+      "authorEmail": "willy@infradead.org",
+      "list": "linux-mm",
+      "url": "https://lore.kernel.org/linux-mm/20260415184422.89012-1-willy@infradead.org/",
+      "messageCount": 38,
+      "participantCount": 11,
+      "firstPost": "2026-04-15T18:44:22Z",
+      "lastPost": "2026-04-18T04:12:55Z"
+    },
+    {
+      "id": "20260414092011.55443-1-axboe@kernel.dk",
+      "subject": "[PATCH 0/8] io_uring: zero-copy receive with upstream devmem",
+      "author": "Jens Axboe",
+      "authorEmail": "axboe@kernel.dk",
+      "list": "io-uring",
+      "url": "https://lore.kernel.org/io-uring/20260414092011.55443-1-axboe@kernel.dk/",
+      "messageCount": 31,
+      "participantCount": 9,
+      "firstPost": "2026-04-14T09:20:11Z",
+      "lastPost": "2026-04-17T22:03:41Z"
+    },
+    {
+      "id": "20260417140055.7788-1-kuba@kernel.org",
+      "subject": "[PATCH net-next v2 0/16] net: scalable multi-PF RSS steering",
+      "author": "Jakub Kicinski",
+      "authorEmail": "kuba@kernel.org",
+      "list": "netdev",
+      "url": "https://lore.kernel.org/netdev/20260417140055.7788-1-kuba@kernel.org/",
+      "messageCount": 29,
+      "participantCount": 12,
+      "firstPost": "2026-04-17T14:00:55Z",
+      "lastPost": "2026-04-18T05:22:18Z"
+    },
+    {
+      "id": "20260416031200.33445-1-ojeda@kernel.org",
+      "subject": "[PATCH v8 00/21] rust: PCI subsystem bindings",
+      "author": "Miguel Ojeda",
+      "authorEmail": "ojeda@kernel.org",
+      "list": "rust-for-linux",
+      "url": "https://lore.kernel.org/rust-for-linux/20260416031200.33445-1-ojeda@kernel.org/",
+      "messageCount": 26,
+      "participantCount": 10,
+      "firstPost": "2026-04-16T03:12:00Z",
+      "lastPost": "2026-04-18T01:08:49Z"
+    },
+    {
+      "id": "20260415221144.66789-1-kent.overstreet@linux.dev",
+      "subject": "[PATCH 00/18] bcachefs: online data compression migration",
+      "author": "Kent Overstreet",
+      "authorEmail": "kent.overstreet@linux.dev",
+      "list": "linux-bcachefs",
+      "url": "https://lore.kernel.org/linux-bcachefs/20260415221144.66789-1-kent.overstreet@linux.dev/",
+      "messageCount": 22,
+      "participantCount": 7,
+      "firstPost": "2026-04-15T22:11:44Z",
+      "lastPost": "2026-04-17T19:34:02Z"
+    },
+    {
+      "id": "20260416070312.99887-1-hch@lst.de",
+      "subject": "[PATCH v3 0/14] block: convert bio_vec users to phys_vec",
+      "author": "Christoph Hellwig",
+      "authorEmail": "hch@lst.de",
+      "list": "linux-block",
+      "url": "https://lore.kernel.org/linux-block/20260416070312.99887-1-hch@lst.de/",
+      "messageCount": 19,
+      "participantCount": 8,
+      "firstPost": "2026-04-16T07:03:12Z",
+      "lastPost": "2026-04-17T23:51:07Z"
+    },
+    {
+      "id": "20260414153300.22110-1-hawk@kernel.org",
+      "subject": "[PATCH bpf-next 0/9] bpf: per-cpu map performance overhaul",
+      "author": "Jesper Dangaard Brouer",
+      "authorEmail": "hawk@kernel.org",
+      "list": "bpf",
+      "url": "https://lore.kernel.org/bpf/20260414153300.22110-1-hawk@kernel.org/",
+      "messageCount": 17,
+      "participantCount": 9,
+      "firstPost": "2026-04-14T15:33:00Z",
+      "lastPost": "2026-04-17T16:42:28Z"
+    },
+    {
+      "id": "20260417091822.45612-1-tglx@linutronix.de",
+      "subject": "[PATCH v2 0/6] genirq: per-CPU IRQ throttling for PREEMPT_RT",
+      "author": "Thomas Gleixner",
+      "authorEmail": "tglx@linutronix.de",
+      "list": "linux-rt-users",
+      "url": "https://lore.kernel.org/linux-rt-users/20260417091822.45612-1-tglx@linutronix.de/",
+      "messageCount": 14,
+      "participantCount": 6,
+      "firstPost": "2026-04-17T09:18:22Z",
+      "lastPost": "2026-04-18T02:17:33Z"
+    },
+    {
+      "id": "20260416184400.78901-1-viro@zeniv.linux.org.uk",
+      "subject": "[PATCH] fs: remove last users of deprecated ->lookup NULL return",
+      "author": "Al Viro",
+      "authorEmail": "viro@zeniv.linux.org.uk",
+      "list": "linux-fsdevel",
+      "url": "https://lore.kernel.org/linux-fsdevel/20260416184400.78901-1-viro@zeniv.linux.org.uk/",
+      "messageCount": 12,
+      "participantCount": 7,
+      "firstPost": "2026-04-16T18:44:00Z",
+      "lastPost": "2026-04-17T20:15:49Z"
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+---
+import subsystems from '../../data/subsystems.json';
+import commits from '../../data/commits.json';
+import cves from '../../data/cves.json';
+import lkml from '../../data/lkml.json';
+import stability from '../../data/stability.json';
+
+const anyDummy =
+  subsystems._dummy ||
+  commits._dummy ||
+  cves._dummy ||
+  lkml._dummy ||
+  stability._dummy;
+
+const pathname = Astro.url.pathname.replace(/\/+$/, '') || '/';
+
+const live = [
+  { label: 'Overview',       href: '/',                match: '/' },
+  { label: 'Stability',      href: '/stability',       match: '/stability' },
+  { label: 'Recommendations', href: '/recommendations', match: '/recommendations' },
+  { label: 'Commits',        href: '/commits',         match: '/commits' },
+  { label: 'Branches',       href: '/branches',        match: '/branches' },
+  { label: 'Releases',       href: '/releases',        match: '/releases' },
+  { label: 'CVEs',           href: '/cves',            match: '/cves' },
+  { label: 'LKML',           href: '/lkml',            match: '/lkml' },
+  { label: 'Languages',      href: '/languages',       match: '/languages' },
+];
+const planned = [];
+---
+<aside class="sidebar">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">
+      <span class="r r3"></span>
+      <span class="r r0"></span>
+    </div>
+    <div class="brand-text">
+      <a href="/" class="brand-link">z-linux.com</a>
+      <span class="tag">kernel · visualised</span>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="section-label">dashboard</div>
+    <ul>
+      {live.map(i => (
+        <li>
+          <a
+            class:list={['nav-link', pathname === i.match && 'active']}
+            href={i.href}
+          >{i.label}</a>
+        </li>
+      ))}
+      {planned.map(p => (
+        <li>
+          <span class="nav-link disabled" title="Planned route — not yet implemented">
+            <span>{p}</span>
+            <small>soon</small>
+          </span>
+        </li>
+      ))}
+    </ul>
+  </nav>
+
+  <footer class="sb-foot">
+    {anyDummy && <div class="dummy">some data is dummy</div>}
+    <div class="link-row">
+      <a href="https://www.kernel.org/" target="_blank" rel="noopener">kernel.org</a>
+      <a href="https://lore.kernel.org/" target="_blank" rel="noopener">lore</a>
+    </div>
+  </footer>
+</aside>
+
+<style>
+  .sidebar {
+    padding: 1.25rem 1rem;
+    border-right: 1px solid rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .mark {
+    width: 34px;
+    height: 34px;
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .r {
+    position: absolute;
+    border-radius: 50%;
+    left: 50%; top: 50%;
+  }
+  .r3 {
+    width: 34px; height: 34px;
+    border: 1.5px solid #4f94d4;
+    transform: translate(-50%, -50%);
+    animation: spin 16s linear infinite;
+  }
+  .r0 {
+    width: 14px; height: 14px;
+    border: 2px solid #ff7a5c;
+    transform: translate(-50%, -50%);
+    animation: spin-rev 10s linear infinite;
+  }
+  @keyframes spin     { to { transform: translate(-50%, -50%) rotate(360deg);  } }
+  @keyframes spin-rev { to { transform: translate(-50%, -50%) rotate(-360deg); } }
+  .brand-text { display: flex; flex-direction: column; gap: 0.05rem; min-width: 0; }
+  .brand-link {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: inherit;
+    text-decoration: none;
+    line-height: 1.05;
+  }
+  .tag {
+    font-size: 0.66rem;
+    color: rgba(0,0,0,0.5);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+  .nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .section-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.6rem;
+    color: rgba(0,0,0,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 0 0.55rem 0.5rem;
+  }
+  .nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    padding: 0.42rem 0.55rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    color: rgba(0,0,0,0.78);
+    border-radius: 4px;
+    text-decoration: none;
+  }
+  a.nav-link:hover { background: rgba(0,0,0,0.04); }
+  .nav-link.active {
+    background: rgba(79,148,212,0.14);
+    color: #2b5c8a;
+    font-weight: 500;
+  }
+  .nav-link.disabled {
+    color: rgba(0,0,0,0.35);
+    cursor: default;
+  }
+  .nav-link.disabled small {
+    font-size: 0.58rem;
+    padding: 0.1rem 0.35rem;
+    background: rgba(0,0,0,0.05);
+    border-radius: 2px;
+    color: rgba(0,0,0,0.45);
+    letter-spacing: 0.05em;
+  }
+  .sb-foot {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(0,0,0,0.08);
+  }
+  .dummy {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.64rem;
+    padding: 0.3rem 0.45rem;
+    background: rgba(197,139,46,0.12);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+  }
+  .link-row {
+    display: flex;
+    gap: 0.8rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem;
+  }
+  .link-row a {
+    color: rgba(0,0,0,0.5);
+    text-decoration: none;
+  }
+  .link-row a:hover {
+    color: #2b5c8a;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 720px) {
+    .sidebar {
+      min-height: auto;
+      position: static;
+      border-right: none;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .sb-foot { margin-top: 0; }
+  }
+</style>

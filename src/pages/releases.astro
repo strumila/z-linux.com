@@ -1,0 +1,398 @@
+---
+import Base from '../layouts/Base.astro';
+import kernels from '../../data/kernels.json';
+import history from '../../data/releases-history.json';
+import ltsEol from '../../data/lts-eol.json';
+
+const isDummy = history._dummy;
+
+const WINDOW_DAYS = 365;
+const now = new Date('2026-04-19');
+const since = new Date(now.getTime() - WINDOW_DAYS * 86_400_000);
+
+const windowReleases = history.releases
+  .filter(r => new Date(r.released) >= since && new Date(r.released) <= now)
+  .sort((a, b) => a.released.localeCompare(b.released));
+
+const MONIKER_COLOR = {
+  mainline: '#ff7a5c',
+  stable:   '#4f94d4',
+  longterm: '#2b5c8a',
+};
+
+const W = 880, H = 140;
+const PAD_L = 16, PAD_R = 16, PAD_T = 20, PAD_B = 28;
+const INNER_W = W - PAD_L - PAD_R;
+
+const ROWS = ['mainline', 'stable', 'longterm'];
+const rowY = m => PAD_T + ROWS.indexOf(m) * 28 + 14;
+
+const dayToX = (date) => {
+  const d = (new Date(date) - since) / (86_400_000 * WINDOW_DAYS);
+  return PAD_L + d * INNER_W;
+};
+
+const monthTicks = [];
+{
+  const cursor = new Date(since);
+  cursor.setDate(1);
+  cursor.setHours(0, 0, 0, 0);
+  while (cursor <= now) {
+    monthTicks.push({
+      x: dayToX(cursor),
+      label: cursor.toLocaleString('en-US', { month: 'short' }) +
+             (cursor.getMonth() === 0 ? ` '${String(cursor.getFullYear()).slice(2)}` : ''),
+    });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+}
+
+function radius(moniker, version) {
+  if (version.includes('-rc')) return 3;
+  if (moniker === 'mainline') return 6;
+  if (moniker === 'stable')   return 4.5;
+  return 3.5;
+}
+
+// LTS lines with EOL
+const longterms = kernels.kernels.filter(k => k.moniker === 'longterm');
+const eolRows = longterms.map(k => {
+  const line = k.version.split('.').slice(0, 2).join('.');
+  const eol = ltsEol.eol[line];
+  let daysUntilEol = null;
+  let pct = 0;
+  if (eol) {
+    daysUntilEol = Math.round((new Date(eol) - now) / 86_400_000);
+    // Assume ~5 year typical LTS lifecycle for bar proportion
+    const full = 365 * 5;
+    pct = Math.max(0, Math.min(1, daysUntilEol / full));
+  }
+  return { line, version: k.version, released: k.released, daysAgo: k.daysAgo, eol, daysUntilEol, pct };
+});
+
+const recent = [...history.releases]
+  .sort((a, b) => b.released.localeCompare(a.released))
+  .slice(0, 20);
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('en-CA');
+}
+function daysSince(iso) {
+  return Math.floor((now - new Date(iso)) / 86_400_000);
+}
+---
+<Base title="Releases · z-linux.com">
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <h1>Releases</h1>
+        <p class="meta">kernel.org release history · {WINDOW_DAYS}-day window</p>
+      </div>
+      {isDummy && <span class="dummy-tag">dummy data</span>}
+    </header>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>Release cadence</h2>
+        <div class="legend">
+          <span><span class="dot" style={`background:${MONIKER_COLOR.mainline}`}></span>mainline</span>
+          <span><span class="dot" style={`background:${MONIKER_COLOR.stable}`}></span>stable</span>
+          <span><span class="dot" style={`background:${MONIKER_COLOR.longterm}`}></span>longterm</span>
+          <span class="muted">small = -rc</span>
+        </div>
+      </header>
+      <svg viewBox={`0 0 ${W} ${H}`} class="cadence" preserveAspectRatio="none" role="img" aria-label="Release cadence timeline">
+        {ROWS.map(m => (
+          <>
+            <text
+              x={PAD_L - 4}
+              y={rowY(m) + 3}
+              text-anchor="end"
+              font-family="ui-monospace, SFMono-Regular, monospace"
+              font-size="9"
+              fill="rgba(0,0,0,0.42)"
+            >{m}</text>
+            <line
+              x1={PAD_L}
+              x2={W - PAD_R}
+              y1={rowY(m)}
+              y2={rowY(m)}
+              stroke="rgba(0,0,0,0.06)"
+              stroke-width="1"
+            />
+          </>
+        ))}
+        {monthTicks.map(t => (
+          <>
+            <line
+              x1={t.x} x2={t.x}
+              y1={PAD_T - 4} y2={H - PAD_B}
+              stroke="rgba(0,0,0,0.04)"
+            />
+            <text
+              x={t.x}
+              y={H - PAD_B + 14}
+              text-anchor="middle"
+              font-family="ui-monospace, SFMono-Regular, monospace"
+              font-size="9"
+              fill="rgba(0,0,0,0.42)"
+            >{t.label}</text>
+          </>
+        ))}
+        {windowReleases.map(r => (
+          <circle
+            cx={dayToX(r.released)}
+            cy={rowY(r.moniker)}
+            r={radius(r.moniker, r.version)}
+            fill={MONIKER_COLOR[r.moniker]}
+            opacity={r.version.includes('-rc') ? 0.55 : 0.9}
+            stroke="white"
+            stroke-width="0.6"
+          >
+            <title>{r.version} · {r.moniker} · {r.released}</title>
+          </circle>
+        ))}
+      </svg>
+    </article>
+
+    <section class="grid-row">
+      <article class="card">
+        <header class="card-head"><h2>LTS lines</h2></header>
+        <ul class="lts-list">
+          {eolRows.map(r => (
+            <li>
+              <div class="lts-head">
+                <span class="lts-ver">{r.version}</span>
+                <span class="lts-eol">
+                  {r.eol ? `EOL ${r.eol}` : 'EOL unknown'}
+                  {r.daysUntilEol != null && (
+                    <span class="lts-days">
+                      {' · '}{r.daysUntilEol > 0 ? `${r.daysUntilEol}d left` : `${-r.daysUntilEol}d past`}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div class="lts-bar">
+                <div class="lts-fill" style={`width: ${(r.pct * 100).toFixed(1)}%`}></div>
+              </div>
+              <div class="lts-sub">
+                released {r.released} · {r.daysAgo}d ago
+              </div>
+            </li>
+          ))}
+        </ul>
+      </article>
+
+      <article class="card">
+        <header class="card-head"><h2>Current state</h2></header>
+        <dl class="state-grid">
+          <div><dt>mainline</dt><dd>{kernels.kernels.find(k => k.moniker === 'mainline')?.version ?? '—'}</dd></div>
+          <div><dt>latest stable</dt><dd>{kernels.latest_stable}</dd></div>
+          <div><dt>LTS lines</dt><dd>{longterms.length}</dd></div>
+          <div><dt>releases in 365d</dt><dd>{windowReleases.length}</dd></div>
+          <div><dt>mainline / stable / longterm</dt><dd>
+            {windowReleases.filter(r => r.moniker === 'mainline').length} ·
+            {' '}{windowReleases.filter(r => r.moniker === 'stable').length} ·
+            {' '}{windowReleases.filter(r => r.moniker === 'longterm').length}
+          </dd></div>
+          <div><dt>-rc count</dt><dd>{windowReleases.filter(r => r.version.includes('-rc')).length}</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <article class="card">
+      <header class="card-head"><h2>Recent releases</h2></header>
+      <table class="rel-table">
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Moniker</th>
+            <th>Released</th>
+            <th class="num">Days ago</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recent.map(r => (
+            <tr>
+              <td class="ver">
+                <span class="dot" style={`background:${MONIKER_COLOR[r.moniker]}; opacity:${r.version.includes('-rc') ? 0.55 : 0.9}`}></span>
+                {r.version}
+              </td>
+              <td class="mono muted">{r.moniker}{r.version.includes('-rc') && ' · rc'}</td>
+              <td class="mono">{fmtDate(r.released)}</td>
+              <td class="num mono">{daysSince(r.released)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell { max-width: 80rem; padding: 1.25rem 1.5rem 2.5rem; }
+  .page-head {
+    margin-bottom: 1.2rem;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.3rem; font-weight: 500; margin: 0;
+  }
+  .meta {
+    margin: 0.2rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.5);
+  }
+  .dummy-tag {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(197,139,46,0.13);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: center;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.3rem;
+    margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.9rem;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500; margin: 0;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+
+  .legend {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem; color: rgba(0,0,0,0.6);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .legend .dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+  .legend .muted { color: rgba(0,0,0,0.42); }
+
+  .cadence {
+    width: 100%;
+    height: 140px;
+    display: block;
+  }
+
+  .grid-row {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .lts-list {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.9rem;
+  }
+  .lts-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 0.5rem; margin-bottom: 0.3rem;
+  }
+  .lts-ver {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.9rem; font-weight: 600;
+  }
+  .lts-eol {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.55);
+  }
+  .lts-days { opacity: 0.75; }
+  .lts-bar {
+    height: 0.5rem;
+    background: rgba(0,0,0,0.05);
+    border-radius: 2px; overflow: hidden;
+  }
+  .lts-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a9d5f 0%, #4f94d4 60%, #c58b2e 95%);
+    opacity: 0.85;
+  }
+  .lts-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem; color: rgba(0,0,0,0.45);
+    margin-top: 0.3rem;
+  }
+
+  .state-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+    margin: 0;
+  }
+  .state-grid div {
+    display: flex; justify-content: space-between;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 0.4rem;
+  }
+  .state-grid dt {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem;
+    color: rgba(0,0,0,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+  }
+  .state-grid dd {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .rel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .rel-table th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(0,0,0,0.45);
+    text-align: left;
+    padding: 0.4rem 0.6rem 0.4rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .rel-table th.num, .rel-table td.num { text-align: right; }
+  .rel-table td {
+    padding: 0.5rem 0.6rem 0.5rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .rel-table tr:last-child td { border-bottom: none; }
+  .rel-table .mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8rem;
+  }
+  .rel-table .muted { color: rgba(0,0,0,0.55); }
+  .rel-table .ver {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-weight: 500;
+    display: flex; align-items: center; gap: 0.45rem;
+  }
+  .rel-table .ver .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; flex-shrink: 0;
+  }
+
+  @media (max-width: 900px) {
+    .grid-row { grid-template-columns: 1fr; }
+  }
+</style>

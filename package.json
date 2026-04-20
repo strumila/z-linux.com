@@ -1,0 +1,24 @@
+{
+  "name": "z-linux.com",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "fetch:kernels": "node scripts/fetch-kernel-releases.mjs"
+  },
+  "dependencies": {
+    "@astrojs/react": "^5.0.3",
+    "astro": "^5.0.0",
+    "d3": "^7.9.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "three": "^0.184.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

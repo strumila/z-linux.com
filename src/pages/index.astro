@@ -1,0 +1,216 @@
+---
+import Base from '../layouts/Base.astro';
+import SubsystemGraph from '../components/SubsystemGraph.jsx';
+import CommitFlame from '../components/CommitFlame.jsx';
+import KpiTile from '../components/KpiTile.astro';
+import MaintainersList from '../components/MaintainersList.astro';
+import CveList from '../components/CveList.astro';
+import LkmlThreads from '../components/LkmlThreads.astro';
+import StabilityCard from '../components/StabilityCard.astro';
+
+import kernels from '../../data/kernels.json';
+import commitsData from '../../data/commits.json';
+import subsystems from '../../data/subsystems.json';
+import cvesData from '../../data/cves.json';
+import lkml from '../../data/lkml.json';
+
+const stable   = kernels.kernels.find(k => k.moniker === 'stable');
+const mainline = kernels.kernels.find(k => k.moniker === 'mainline');
+
+const cveBySev = cvesData.cves.reduce(
+  (a, c) => { a[c.severity] = (a[c.severity] ?? 0) + 1; return a; },
+  {},
+);
+
+const hottest = [...lkml.threads].sort((a, b) => b.messageCount - a.messageCount)[0];
+
+const windowDays = Math.max(
+  1,
+  Math.round(
+    (new Date(commitsData.window.until) - new Date(commitsData.window.since)) / 86_400_000,
+  ),
+);
+---
+<Base title="z-linux.com">
+  <div class="shell">
+    <header class="page-head">
+      <h1>Overview</h1>
+      <p class="updated">stable {stable.version} · mainline {mainline.version} · updated {new Date(kernels.fetchedAt).toLocaleDateString('en-CA')}</p>
+    </header>
+
+    <StabilityCard />
+
+    <section class="kpi-row" aria-label="At a glance">
+      <KpiTile
+        label="stable"
+        value={stable.version}
+        sub={`${stable.daysAgo}d ago`}
+        accent="blue"
+      />
+      <KpiTile
+        label="mainline"
+        value={mainline.version}
+        sub={`${mainline.daysAgo}d ago`}
+        accent="coral"
+      />
+      <KpiTile
+        label="CVEs"
+        value={cvesData.cves.length}
+        sub={`${cveBySev.high ?? 0} high · ${cveBySev.medium ?? 0} med · ${cveBySev.low ?? 0} low`}
+        accent="red"
+      />
+      <KpiTile
+        label="commits"
+        value={commitsData.window.totalCommits.toLocaleString()}
+        sub={`${commitsData.window.totalAuthors} authors · ${windowDays}d`}
+      />
+      <KpiTile
+        label="hot thread"
+        value={`${hottest.messageCount} replies`}
+        sub={hottest.subject}
+        truncate
+        accent="blue"
+      />
+    </section>
+
+    <section class="grid-row">
+      <article class="card wide">
+        <h2>Subsystem volume</h2>
+        <SubsystemGraph data={subsystems} client:visible />
+      </article>
+      <article class="card narrow">
+        <h2>Top maintainers</h2>
+        <MaintainersList data={commitsData} />
+        <div class="card-foot">
+          <a href="/commits/">Full commit view →</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-row">
+      <article class="card wide">
+        <h2>Commits over time</h2>
+        <CommitFlame data={subsystems} client:visible />
+      </article>
+      <article class="card narrow">
+        <h2>Recent CVEs</h2>
+        <CveList data={cvesData} />
+        <div class="card-foot">
+          <a href="/cves/">All CVEs →</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="full-row">
+      <article class="card">
+        <h2>LKML · trending threads</h2>
+        <LkmlThreads data={lkml} />
+        <div class="card-foot">
+          <a href="/lkml/">All threads →</a>
+        </div>
+      </article>
+    </section>
+
+    <footer class="page-foot">
+      <span>LTS lines:</span>
+      {kernels.kernels.filter(k => k.moniker === 'longterm').map(k => (
+        <span class="lts">{k.version} <small>{k.daysAgo}d</small></span>
+      ))}
+    </footer>
+  </div>
+</Base>
+
+<style>
+  .shell {
+    max-width: 80rem;
+    padding: 1.25rem 1.5rem 2.5rem;
+  }
+  .page-head {
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .page-head h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+  .updated {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+    color: rgba(0,0,0,0.5);
+  }
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .grid-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .full-row { margin-bottom: 1rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.15rem 1.2rem 1.05rem;
+    min-width: 0;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem;
+    font-weight: 500;
+    margin: 0 0 0.95rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .card-foot {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed rgba(0,0,0,0.08);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.75rem;
+  }
+  .card-foot a {
+    color: inherit;
+    text-decoration: none;
+    opacity: 0.65;
+  }
+  .card-foot a:hover {
+    opacity: 1;
+    color: #2b5c8a;
+  }
+  .page-foot {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.1rem;
+    align-items: baseline;
+    background: rgba(0,0,0,0.02);
+    border-radius: 6px;
+  }
+  .page-foot .lts small { opacity: 0.55; margin-left: 0.3rem; }
+
+  @media (max-width: 1024px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-row { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,49 @@
+{
+  "_dummy": true,
+  "fetchedAt": "2026-04-18T03:31:07.000Z",
+  "window": {
+    "since": "2026-04-09",
+    "until": "2026-04-18",
+    "totalCommits": 4872,
+    "totalAuthors": 923,
+    "totalReverts": 18,
+    "totalFixes": 342,
+    "totalFiles": 11847,
+    "churnConcentration": 0.741,
+    "note": "Window is shallow clone depth (~10 days), not a calendar period."
+  },
+  "daily": [
+    { "date": "2026-04-09", "commits": 487, "reverts": 2 },
+    { "date": "2026-04-10", "commits": 523, "reverts": 1 },
+    { "date": "2026-04-11", "commits": 612, "reverts": 3 },
+    { "date": "2026-04-12", "commits": 544, "reverts": 0 },
+    { "date": "2026-04-13", "commits": 389, "reverts": 2 },
+    { "date": "2026-04-14", "commits": 501, "reverts": 4 },
+    { "date": "2026-04-15", "commits": 478, "reverts": 1 },
+    { "date": "2026-04-16", "commits": 556, "reverts": 2 },
+    { "date": "2026-04-17", "commits": 432, "reverts": 3 },
+    { "date": "2026-04-18", "commits": 350, "reverts": 0 }
+  ],
+  "topAuthors": [
+    { "name": "Linus Torvalds", "email": "torvalds@linux-foundation.org", "commits": 52 },
+    { "name": "Andrew Morton", "email": "akpm@linux-foundation.org", "commits": 47 },
+    { "name": "Greg Kroah-Hartman", "email": "gregkh@linuxfoundation.org", "commits": 41 },
+    { "name": "Jakub Kicinski", "email": "kuba@kernel.org", "commits": 38 },
+    { "name": "David S. Miller", "email": "davem@davemloft.net", "commits": 34 },
+    { "name": "Arnd Bergmann", "email": "arnd@arndb.de", "commits": 31 },
+    { "name": "Peter Zijlstra", "email": "peterz@infradead.org", "commits": 28 },
+    { "name": "Christoph Hellwig", "email": "hch@lst.de", "commits": 27 },
+    { "name": "Thomas Gleixner", "email": "tglx@linutronix.de", "commits": 25 },
+    { "name": "Ingo Molnar", "email": "mingo@kernel.org", "commits": 23 },
+    { "name": "Al Viro", "email": "viro@zeniv.linux.org.uk", "commits": 22 },
+    { "name": "Jens Axboe", "email": "axboe@kernel.dk", "commits": 21 },
+    { "name": "Matthew Wilcox", "email": "willy@infradead.org", "commits": 20 },
+    { "name": "Paolo Abeni", "email": "pabeni@redhat.com", "commits": 19 },
+    { "name": "Eric Dumazet", "email": "edumazet@google.com", "commits": 18 },
+    { "name": "Kent Overstreet", "email": "kent.overstreet@linux.dev", "commits": 17 },
+    { "name": "Mel Gorman", "email": "mgorman@techsingularity.net", "commits": 16 },
+    { "name": "Vlastimil Babka", "email": "vbabka@suse.cz", "commits": 15 },
+    { "name": "Jesper Dangaard Brouer", "email": "hawk@kernel.org", "commits": 14 },
+    { "name": "Jonathan Corbet", "email": "corbet@lwn.net", "commits": 13 }
+  ]
+}

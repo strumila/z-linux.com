@@ -1,0 +1,64 @@
+---
+import Base from '../layouts/Base.astro';
+import SubsystemGraph from '../components/SubsystemGraph.jsx';
+import CommitFlame from '../components/CommitFlame.jsx';
+import subsystems from '../../data/subsystems.json';
+---
+<Base title="commits · z-linux.com">
+  <main>
+    <header>
+      <h1>Commit activity</h1>
+      <p class="meta">
+        {subsystems.window.totalCommits.toLocaleString()} commits ·
+        {subsystems.window.totalAuthors} authors ·
+        window {subsystems.window.since} → {subsystems.window.until}
+        {subsystems._dummy && <span class="dummy">· dummy data</span>}
+      </p>
+    </header>
+
+    <section class="viz">
+      <h2>Subsystem volume</h2>
+      <SubsystemGraph data={subsystems} client:visible />
+    </section>
+
+    <section class="viz">
+      <h2>Over time</h2>
+      <CommitFlame data={subsystems} client:visible />
+    </section>
+  </main>
+</Base>
+
+<style>
+  main {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.5rem;
+    margin: 0 0 0.25rem;
+  }
+  .meta {
+    margin: 0 0 2rem;
+    font-size: 0.9rem;
+    opacity: 0.65;
+  }
+  .dummy {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    color: #b84;
+    margin-left: 0.35rem;
+  }
+  .viz {
+    margin-top: 2.5rem;
+  }
+  .viz h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.95rem;
+    font-weight: 500;
+    opacity: 0.65;
+    margin: 0 0 1rem;
+    text-transform: lowercase;
+  }
+</style>

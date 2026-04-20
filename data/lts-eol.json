@@ -1,0 +1,13 @@
+{
+  "_review": true,
+  "_note": "Best-effort EOL dates sourced from kernel.org release pages; verify against https://www.kernel.org/category/releases.html before shipping. Dates are the last day of projected maintenance.",
+  "fetchedAt": "2026-04-19T00:00:00.000Z",
+  "eol": {
+    "6.18": "2027-12-31",
+    "6.12": "2026-12-31",
+    "6.6":  "2026-12-31",
+    "6.1":  "2027-12-31",
+    "5.15": "2026-10-31",
+    "5.10": "2026-12-31"
+  }
+}

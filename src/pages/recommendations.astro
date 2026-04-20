@@ -1,0 +1,547 @@
+---
+import Base from '../layouts/Base.astro';
+import kernels from '../../data/kernels.json';
+import cvesData from '../../data/cves.json';
+import ltsEol from '../../data/lts-eol.json';
+import stability from '../../data/stability.json';
+import propagation from '../../data/cve-propagation.json';
+
+const now = new Date('2026-04-19');
+
+// Active lines (anything in kernels.json + known EOL lines)
+// We derive the full set from eol table + current kernels
+const lineSet = new Set();
+for (const k of kernels.kernels) lineSet.add(k.version.split('.').slice(0, 2).join('.'));
+for (const k of Object.keys(ltsEol.eol)) lineSet.add(k);
+
+// For each line, find its latest release + metadata
+const lines = [...lineSet].map(line => {
+  const releases = kernels.kernels.filter(k => k.version.startsWith(line + '.') || k.version === line);
+  const current = releases[0];
+  const eolStr = ltsEol.eol[line];
+  const eol = eolStr ? new Date(eolStr) : null;
+  const daysToEol = eol ? Math.round((eol - now) / 86_400_000) : null;
+  const moniker = current?.moniker ?? 'unknown';
+
+  // Unpatched CVE count: CVEs where `affected` entries mention this line AND `fixedIn` doesn't contain a version on this line
+  let unpatchedCves = 0;
+  let highUnpatched = 0;
+  const pendingInProp = [];
+  for (const cve of cvesData.cves) {
+    const affectsLine = cve.affected?.some(a => a.startsWith(line + '.') || a.startsWith(line + '-') || a === line);
+    if (!affectsLine) continue;
+    const fixedOnLine = cve.fixedIn?.some(f => f.startsWith(line + '.'));
+    const branchProp = propagation.propagation?.[cve.id]?.perBranch?.[`linux-${line}.y`];
+    if (!fixedOnLine || branchProp?.status === 'pending') {
+      unpatchedCves++;
+      if (cve.severity === 'high') highUnpatched++;
+      pendingInProp.push(cve.id);
+    }
+  }
+
+  const daysSincePatch = current?.daysAgo ?? null;
+  const isEol = daysToEol != null && daysToEol < 0;
+
+  let maturity;
+  if (!current) maturity = 'unknown';
+  else if (moniker === 'mainline') maturity = 'bleeding-edge';
+  else if (moniker === 'stable') maturity = 'fresh';
+  else if (isEol) maturity = 'eol';
+  else if (daysToEol != null && daysToEol < 180) maturity = 'aging';
+  else if (daysToEol != null && daysToEol > 365) maturity = 'mature';
+  else maturity = 'supported';
+
+  // Synthetic per-line stability score (real value requires per-LTS panel).
+  // Composite heuristic: penalize unpatched CVEs, EOL proximity, freshness.
+  const composite = stability.current.composite;
+  let score = composite; // start from overall
+  score -= Math.min(0.35, unpatchedCves * 0.04);
+  score -= Math.min(0.15, highUnpatched * 0.05);
+  if (moniker === 'mainline') score -= 0.10;
+  if (moniker === 'stable')   score -= 0.03;
+  if (isEol) score -= 0.50;
+  else if (daysToEol != null && daysToEol < 180) score -= 0.10;
+  score = Math.max(0, Math.min(1, score));
+
+  return {
+    line,
+    moniker,
+    current: current ? current.version : null,
+    released: current?.released,
+    daysSincePatch,
+    eol: eolStr,
+    daysToEol,
+    isEol,
+    unpatchedCves,
+    highUnpatched,
+    maturity,
+    score,
+  };
+}).sort((a, b) => {
+  // mainline first, then stable, then LTS desc by line number
+  const order = { mainline: 0, stable: 1, longterm: 2, unknown: 3 };
+  if (order[a.moniker] !== order[b.moniker]) return order[a.moniker] - order[b.moniker];
+  return b.line.localeCompare(a.line, undefined, { numeric: true });
+});
+
+function bandColor(score) {
+  if (score >= 0.75) return '#4a9d5f';
+  if (score >= 0.60) return '#4f94d4';
+  if (score >= 0.45) return '#c58b2e';
+  return '#e85b4a';
+}
+const MATURITY_COLOR = {
+  'bleeding-edge': '#ff7a5c',
+  fresh:           '#4f94d4',
+  mature:          '#4a9d5f',
+  supported:       '#5fa5a5',
+  aging:           '#c58b2e',
+  eol:             '#e85b4a',
+  unknown:         'rgba(0,0,0,0.35)',
+};
+
+function cellColor(value, kind) {
+  if (kind === 'cve') {
+    if (value === 0) return '#4a9d5f';
+    if (value <= 2)  return '#4f94d4';
+    if (value <= 5)  return '#c58b2e';
+    return '#e85b4a';
+  }
+  if (kind === 'eol') {
+    if (value == null) return 'rgba(0,0,0,0.15)';
+    if (value < 0)      return '#e85b4a';
+    if (value < 180)    return '#c58b2e';
+    if (value < 540)    return '#4f94d4';
+    return '#4a9d5f';
+  }
+  if (kind === 'freshness') {
+    if (value == null) return 'rgba(0,0,0,0.15)';
+    if (value <= 7)   return '#4a9d5f';
+    if (value <= 30)  return '#4f94d4';
+    if (value <= 90)  return '#c58b2e';
+    return '#e85b4a';
+  }
+  return 'rgba(0,0,0,0.1)';
+}
+
+// --- Personas --------------------------------------------------------
+const personas = [
+  {
+    id: 'production',
+    name: 'Production ops',
+    blurb: 'Stable under load. Prefer LTS lines with mature patch history and low outstanding CVE exposure.',
+    pick: (lines) => {
+      const candidates = lines.filter(l => l.moniker === 'longterm' && !l.isEol && l.daysToEol > 180);
+      candidates.sort((a, b) =>
+        (a.unpatchedCves - b.unpatchedCves) || (b.score - a.score) || (b.daysToEol - a.daysToEol)
+      );
+      return candidates[0];
+    },
+  },
+  {
+    id: 'security',
+    name: 'Security-critical',
+    blurb: 'Minimize CVE exposure. Latest patch of a well-maintained LTS; avoid EOL.',
+    pick: (lines) => {
+      const candidates = lines.filter(l => l.moniker === 'longterm' && !l.isEol);
+      candidates.sort((a, b) =>
+        (a.unpatchedCves - b.unpatchedCves) ||
+        (a.highUnpatched - b.highUnpatched) ||
+        (b.daysToEol - a.daysToEol)
+      );
+      return candidates[0];
+    },
+  },
+  {
+    id: 'desktop',
+    name: 'Enthusiast / desktop',
+    blurb: 'Latest hardware support matters. Current stable or mainline, accept regression risk.',
+    pick: (lines) => lines.find(l => l.moniker === 'stable') ?? lines.find(l => l.moniker === 'mainline'),
+  },
+  {
+    id: 'embedded',
+    name: 'Embedded / long-tail',
+    blurb: 'Long support horizon, conservative. Oldest supported LTS whose EOL is still reasonably far.',
+    pick: (lines) => {
+      const candidates = lines.filter(l => l.moniker === 'longterm' && !l.isEol && l.daysToEol > 0);
+      candidates.sort((a, b) => a.line.localeCompare(b.line, undefined, { numeric: true }));
+      return candidates[0];
+    },
+  },
+  {
+    id: 'rust',
+    name: 'Rust-curious',
+    blurb: 'Want useful Rust abstractions. 6.12 is the first LTS with meaningful Rust surface.',
+    pick: (lines) => {
+      const target = lines.find(l => l.line === '6.12');
+      if (target && !target.isEol) return target;
+      return lines.find(l => l.moniker === 'longterm' && !l.isEol);
+    },
+  },
+];
+
+const personaRecs = personas.map(p => ({
+  ...p,
+  recommendation: p.pick(lines),
+}));
+
+// --- Upgrade advisor -------------------------------------------------
+const advisor = lines
+  .filter(l => l.moniker === 'longterm' || l.moniker === 'stable')
+  .map(l => ({
+    from: l.line,
+    current: l.current,
+    score: l.score,
+    pendingCves: propagation.branches && propagation.propagation
+      ? Object.entries(propagation.propagation)
+          .filter(([, p]) => p.perBranch[`linux-${l.line}.y`]?.status === 'pending')
+          .map(([id]) => id)
+      : [],
+    peerAlternatives: lines
+      .filter(o => o.line !== l.line && o.moniker === 'longterm' && !o.isEol)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2),
+  }));
+
+function fmt(n) { return n?.toLocaleString?.() ?? n; }
+---
+<Base title="Recommendations · z-linux.com">
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <h1>Recommendations</h1>
+        <p class="meta">derived from current risk / stability indicators · applies to (line, latest patch) combinations</p>
+      </div>
+      <span class="indicative">indicative · per-line KSI not yet fitted</span>
+    </header>
+
+    <section class="persona-grid">
+      {personaRecs.map(p => p.recommendation && (
+        <article class="persona" style={`--band:${bandColor(p.recommendation.score)}`}>
+          <header class="persona-head">
+            <h2>{p.name}</h2>
+            <div class="persona-pick">
+              <span class="pick-ver">{p.recommendation.current}</span>
+              <span class="pick-moniker">{p.recommendation.moniker}</span>
+            </div>
+          </header>
+          <p class="persona-blurb">{p.blurb}</p>
+          <dl class="persona-stats">
+            <div><dt>score</dt><dd style={`color:${bandColor(p.recommendation.score)}`}>{p.recommendation.score.toFixed(2)}</dd></div>
+            <div><dt>unpatched CVEs</dt><dd>{p.recommendation.unpatchedCves} <span class="muted">({p.recommendation.highUnpatched} high)</span></dd></div>
+            <div><dt>days to EOL</dt><dd>{p.recommendation.daysToEol ?? '—'}</dd></div>
+            <div><dt>last patch</dt><dd>{p.recommendation.daysSincePatch}d ago</dd></div>
+          </dl>
+        </article>
+      ))}
+    </section>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>Decision matrix</h2>
+        <span class="card-sub">heat-mapped; greener = better for that column</span>
+      </header>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Line</th>
+            <th>Latest</th>
+            <th>Moniker</th>
+            <th class="num">Score</th>
+            <th class="num">Unpatched CVEs</th>
+            <th class="num">High-sev</th>
+            <th class="num">Days to EOL</th>
+            <th class="num">Patch age (d)</th>
+            <th>Maturity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map(l => (
+            <tr class={l.isEol ? 'eol-row' : ''}>
+              <td class="line-cell">{l.line}</td>
+              <td class="mono">{l.current ?? '—'}</td>
+              <td class="mono muted">{l.moniker}</td>
+              <td class="num mono heat" style={`color:${bandColor(l.score)}`}>
+                <span class="heat-dot" style={`background:${bandColor(l.score)}`}></span>
+                {l.score.toFixed(2)}
+              </td>
+              <td class="num mono heat" style={`color:${cellColor(l.unpatchedCves, 'cve')}`}>
+                <span class="heat-dot" style={`background:${cellColor(l.unpatchedCves, 'cve')}`}></span>
+                {l.unpatchedCves}
+              </td>
+              <td class="num mono muted">{l.highUnpatched}</td>
+              <td class="num mono heat" style={`color:${cellColor(l.daysToEol, 'eol')}`}>
+                <span class="heat-dot" style={`background:${cellColor(l.daysToEol, 'eol')}`}></span>
+                {l.daysToEol ?? '—'}
+              </td>
+              <td class="num mono heat" style={`color:${cellColor(l.daysSincePatch, 'freshness')}`}>
+                <span class="heat-dot" style={`background:${cellColor(l.daysSincePatch, 'freshness')}`}></span>
+                {l.daysSincePatch ?? '—'}
+              </td>
+              <td>
+                <span class="pill" style={`background:${MATURITY_COLOR[l.maturity]}22; color:${MATURITY_COLOR[l.maturity]}`}>{l.maturity}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>Upgrade advisor</h2>
+        <span class="card-sub">for each active line: pending CVE backports and better-scoring peers</span>
+      </header>
+      <ul class="advisor">
+        {advisor.map(a => (
+          <li>
+            <div class="adv-line">
+              <span class="adv-ver">{a.current}</span>
+              <span class="adv-score" style={`color:${bandColor(a.score)}`}>{a.score.toFixed(2)}</span>
+            </div>
+            <div class="adv-body">
+              {a.pendingCves.length > 0 ? (
+                <div class="adv-row">
+                  <span class="adv-label">pending CVE backports</span>
+                  <span class="adv-list">
+                    {a.pendingCves.map(c => (
+                      <a class="cve-pill" href={`/cves/`}>{c}</a>
+                    ))}
+                  </span>
+                </div>
+              ) : (
+                <div class="adv-row"><span class="adv-label">pending</span><span class="muted">none tracked</span></div>
+              )}
+              {a.peerAlternatives.length > 0 && (
+                <div class="adv-row">
+                  <span class="adv-label">better-scoring peers</span>
+                  <span class="adv-list">
+                    {a.peerAlternatives.map(p => (
+                      <span class="peer-pill" style={`color:${bandColor(p.score)}`}>
+                        {p.current} · {p.score.toFixed(2)}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </article>
+
+    <article class="card prose-card">
+      <header class="card-head"><h2>How these scores are derived</h2></header>
+      <p class="prose">
+        Per-line scores are currently <strong>heuristic</strong>: we start from the overall KSI composite and adjust
+        for unpatched CVE count, high-severity CVE count, EOL proximity, and moniker (mainline/stable incur
+        regression-risk penalties). This stands in for a proper <em>per-line</em> hierarchical SEM, which is
+        deferred until per-LTS panel data (Q3 v2) and historical bootstrap are available.
+      </p>
+      <p class="prose muted">
+        Once per-line KSI is fit, these scores become fitted latent estimates; the schema doesn't change.
+      </p>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell { max-width: 80rem; padding: 1.25rem 1.5rem 2.5rem; }
+  .page-head {
+    margin-bottom: 1.2rem;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.3rem; font-weight: 500; margin: 0;
+  }
+  .meta {
+    margin: 0.2rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.5);
+  }
+  .indicative {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(197,139,46,0.13);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: center;
+  }
+
+  .persona-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  .persona {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    position: relative; overflow: hidden;
+  }
+  .persona::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--band);
+  }
+  .persona-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 0.5rem; margin-bottom: 0.55rem;
+  }
+  .persona h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem; font-weight: 500; margin: 0;
+    color: rgba(0,0,0,0.65);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .persona-pick {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem;
+  }
+  .pick-ver {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.05rem; font-weight: 600; color: var(--band);
+  }
+  .pick-moniker {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.65rem; color: rgba(0,0,0,0.5);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .persona-blurb {
+    font-size: 0.82rem; line-height: 1.45;
+    color: rgba(0,0,0,0.72);
+    margin: 0 0 0.75rem;
+  }
+  .persona-stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 0.7rem;
+    margin: 0;
+    padding-top: 0.6rem;
+    border-top: 1px dashed rgba(0,0,0,0.08);
+  }
+  .persona-stats div { display: flex; flex-direction: column; gap: 0.1rem; }
+  .persona-stats dt {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: rgba(0,0,0,0.45);
+    margin: 0;
+  }
+  .persona-stats dd {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem; margin: 0;
+  }
+  .muted { color: rgba(0,0,0,0.5); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.3rem; margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500; margin: 0;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .card-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem; color: rgba(0,0,0,0.45);
+  }
+
+  .matrix { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .matrix th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.64rem; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: rgba(0,0,0,0.45);
+    text-align: left; padding: 0.4rem 0.55rem 0.4rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .matrix th.num, .matrix td.num { text-align: right; }
+  .matrix td {
+    padding: 0.45rem 0.55rem 0.45rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .matrix .mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8rem;
+  }
+  .line-cell {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.85rem; font-weight: 600;
+  }
+  .heat {
+    font-weight: 500;
+    display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.3rem;
+  }
+  .heat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+  .eol-row td { opacity: 0.6; }
+  .pill {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.64rem; padding: 0.18rem 0.45rem;
+    border-radius: 3px; letter-spacing: 0.06em;
+    text-transform: lowercase; font-weight: 500;
+  }
+
+  .advisor { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.8rem; }
+  .advisor li {
+    display: grid;
+    grid-template-columns: 10rem 1fr;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 0.75rem 0.85rem;
+    background: rgba(0,0,0,0.02);
+    border-radius: 6px;
+  }
+  .adv-line {
+    display: flex; flex-direction: column; gap: 0.25rem;
+  }
+  .adv-ver {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.95rem; font-weight: 600;
+  }
+  .adv-score {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500;
+  }
+  .adv-body { display: flex; flex-direction: column; gap: 0.35rem; }
+  .adv-row {
+    display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.76rem;
+  }
+  .adv-label {
+    color: rgba(0,0,0,0.5);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 0.62rem;
+    min-width: 10rem;
+  }
+  .adv-list { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .cve-pill {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    background: rgba(232,91,74,0.12);
+    color: #9a2c1d;
+    border-radius: 3px;
+    text-decoration: none;
+    font-size: 0.72rem;
+  }
+  .cve-pill:hover { background: rgba(232,91,74,0.2); }
+  .peer-pill {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    background: rgba(79,148,212,0.12);
+    border-radius: 3px;
+    font-size: 0.72rem;
+  }
+
+  .prose { font-size: 0.87rem; line-height: 1.55; color: rgba(0,0,0,0.78); margin: 0 0 0.8rem; }
+  .prose.muted { color: rgba(0,0,0,0.5); font-size: 0.82rem; }
+  .prose em { font-style: italic; color: rgba(0,0,0,0.6); }
+</style>

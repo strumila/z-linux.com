@@ -1,0 +1,27 @@
+name: Kernel releases
+
+on:
+  schedule:
+    - cron: '17 * * * *'        # :17 to avoid the hourly stampede
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node scripts/fetch-kernel-releases.mjs
+      - name: Commit if changed
+        run: |
+          git config user.name  "cron-bot"
+          git config user.email "cron@z-linux.com"
+          git add data/kernels.json
+          git diff --staged --quiet || {
+            git commit -m "chore(data): kernel releases"
+            git push
+          }

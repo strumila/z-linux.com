@@ -1,0 +1,116 @@
+{
+  "_dummy": true,
+  "fetchedAt": "2026-04-18T08:00:00.000Z",
+  "cves": [
+    {
+      "id": "CVE-2026-11234",
+      "published": "2026-04-17",
+      "summary": "drivers/net/wireless/mt76: out-of-bounds write in mt7915_mcu_parse_response",
+      "severity": "high",
+      "cvss": 8.1,
+      "subsystem": "drivers/net/wireless",
+      "affected": ["6.12.0-6.12.82", "6.18.0-6.18.23", "6.19.0-6.19.12"],
+      "fixedIn": ["6.12.83", "6.18.24", "6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-17-CVE-2026-11234/"
+    },
+    {
+      "id": "CVE-2026-11187",
+      "published": "2026-04-17",
+      "summary": "fs/ntfs3: use-after-free in ntfs_iget5 on malformed volume",
+      "severity": "high",
+      "cvss": 7.8,
+      "subsystem": "fs/ntfs3",
+      "affected": ["6.18.0-6.18.23", "6.19.0-6.19.12"],
+      "fixedIn": ["6.18.24", "6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-17-CVE-2026-11187/"
+    },
+    {
+      "id": "CVE-2026-11056",
+      "published": "2026-04-16",
+      "summary": "kernel/bpf: info leak via uninitialised stack slot in verifier",
+      "severity": "medium",
+      "cvss": 5.5,
+      "subsystem": "kernel/bpf",
+      "affected": ["6.12.0-6.12.82", "6.18.0-6.18.23", "6.19.0-6.19.12", "7.0-rc*"],
+      "fixedIn": ["6.12.83", "6.18.24", "6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-16-CVE-2026-11056/"
+    },
+    {
+      "id": "CVE-2026-10998",
+      "published": "2026-04-16",
+      "summary": "net/sched: NULL pointer deref in qdisc_graft on concurrent tc operations",
+      "severity": "medium",
+      "cvss": 6.2,
+      "subsystem": "net/sched",
+      "affected": ["6.19.0-6.19.12"],
+      "fixedIn": ["6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-16-CVE-2026-10998/"
+    },
+    {
+      "id": "CVE-2026-10887",
+      "published": "2026-04-15",
+      "summary": "drivers/gpu/drm/amd: double-free in amdgpu_vm_handle_moved",
+      "severity": "medium",
+      "cvss": 5.9,
+      "subsystem": "drivers/gpu/drm/amd",
+      "affected": ["6.18.0-6.18.23", "6.19.0-6.19.12"],
+      "fixedIn": ["6.18.24", "6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-15-CVE-2026-10887/"
+    },
+    {
+      "id": "CVE-2026-10776",
+      "published": "2026-04-15",
+      "summary": "io_uring: race condition in io_poll_cancel_hash with concurrent cancellation",
+      "severity": "high",
+      "cvss": 7.5,
+      "subsystem": "io_uring",
+      "affected": ["6.12.0-6.12.82", "6.18.0-6.18.23", "6.19.0-6.19.12"],
+      "fixedIn": ["6.12.83", "6.18.24", "6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-15-CVE-2026-10776/"
+    },
+    {
+      "id": "CVE-2026-10654",
+      "published": "2026-04-14",
+      "summary": "drivers/usb/gadget: buffer overflow in f_fs on oversized descriptor",
+      "severity": "medium",
+      "cvss": 6.8,
+      "subsystem": "drivers/usb/gadget",
+      "affected": ["6.18.0-6.18.23", "6.19.0-6.19.12"],
+      "fixedIn": ["6.18.24", "6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-14-CVE-2026-10654/"
+    },
+    {
+      "id": "CVE-2026-10543",
+      "published": "2026-04-14",
+      "summary": "mm/memcg: refcount underflow on concurrent cgroup deletion",
+      "severity": "low",
+      "cvss": 3.3,
+      "subsystem": "mm/memcg",
+      "affected": ["6.19.0-6.19.11"],
+      "fixedIn": ["6.19.12"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-14-CVE-2026-10543/"
+    },
+    {
+      "id": "CVE-2026-10432",
+      "published": "2026-04-13",
+      "summary": "crypto/aead: missing input validation in algif_aead recvmsg",
+      "severity": "medium",
+      "cvss": 5.3,
+      "subsystem": "crypto",
+      "affected": ["6.12.0-6.12.82", "6.18.0-6.18.23", "6.19.0-6.19.12"],
+      "fixedIn": ["6.12.83", "6.18.24", "6.19.13"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-13-CVE-2026-10432/"
+    },
+    {
+      "id": "CVE-2026-10321",
+      "published": "2026-04-12",
+      "summary": "security/keys: use-after-free in keyring_search_rcu on key revocation",
+      "severity": "high",
+      "cvss": 7.3,
+      "subsystem": "security/keys",
+      "affected": ["6.18.0-6.18.22", "6.19.0-6.19.11"],
+      "fixedIn": ["6.18.23", "6.19.12"],
+      "url": "https://lore.kernel.org/linux-cve-announce/2026-04-12-CVE-2026-10321/"
+    }
+  ]
+}

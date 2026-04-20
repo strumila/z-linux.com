@@ -1,0 +1,401 @@
+---
+import Base from '../layouts/Base.astro';
+import cvesData from '../../data/cves.json';
+
+const { cves, _dummy } = cvesData;
+
+const sevOrder = ['high', 'medium', 'low'];
+const sevColor = {
+  high:   '#e85b4a',
+  medium: '#c58b2e',
+  low:    '#6c757d',
+};
+const sevBg = {
+  high:   'rgba(232,91,74,0.14)',
+  medium: 'rgba(197,139,46,0.17)',
+  low:    'rgba(108,117,125,0.14)',
+};
+
+const bySev = {};
+sevOrder.forEach(s => (bySev[s] = 0));
+cves.forEach(c => { bySev[c.severity] = (bySev[c.severity] ?? 0) + 1; });
+
+const total = cves.length;
+
+// Donut geometry
+const DONUT_SIZE = 160;
+const R_OUTER = 72;
+const R_INNER = 46;
+const CENTER = DONUT_SIZE / 2;
+let cursor = -Math.PI / 2;
+const arcs = sevOrder.map(sev => {
+  const n = bySev[sev];
+  const angle = total ? (n / total) * Math.PI * 2 : 0;
+  const start = cursor;
+  const end = cursor + angle;
+  cursor = end;
+  const largeArc = angle > Math.PI ? 1 : 0;
+  const x1 = CENTER + R_OUTER * Math.cos(start);
+  const y1 = CENTER + R_OUTER * Math.sin(start);
+  const x2 = CENTER + R_OUTER * Math.cos(end);
+  const y2 = CENTER + R_OUTER * Math.sin(end);
+  const x3 = CENTER + R_INNER * Math.cos(end);
+  const y3 = CENTER + R_INNER * Math.sin(end);
+  const x4 = CENTER + R_INNER * Math.cos(start);
+  const y4 = CENTER + R_INNER * Math.sin(start);
+  const d = total
+    ? `M ${x1} ${y1} A ${R_OUTER} ${R_OUTER} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${R_INNER} ${R_INNER} 0 ${largeArc} 0 ${x4} ${y4} Z`
+    : '';
+  return { sev, n, d };
+});
+
+// Subsystem distribution (top-level only)
+const bySubsystem = {};
+cves.forEach(c => {
+  const top = (c.subsystem ?? '?').split('/')[0];
+  if (!bySubsystem[top]) bySubsystem[top] = { total: 0, high: 0, medium: 0, low: 0 };
+  bySubsystem[top].total++;
+  bySubsystem[top][c.severity]++;
+});
+const subRows = Object.entries(bySubsystem)
+  .map(([name, stats]) => ({ name, ...stats }))
+  .sort((a, b) => b.total - a.total);
+const maxSubTotal = Math.max(1, ...subRows.map(r => r.total));
+
+// CVSS distribution (histogram, bins of 1.0)
+const bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const cvssHist = bins.map(b => ({
+  bin: b,
+  count: cves.filter(c => typeof c.cvss === 'number' && c.cvss >= b && c.cvss < b + 1).length,
+}));
+const maxCvssBin = Math.max(1, ...cvssHist.map(h => h.count));
+
+// Sorted CVE list
+const sorted = [...cves].sort((a, b) => b.published.localeCompare(a.published));
+
+function fmtAffected(a) {
+  return a.map(s => s.replace(/-\*$/, '')).join(', ');
+}
+---
+<Base title="CVEs · z-linux.com">
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <h1>CVEs</h1>
+        <p class="meta">linux-cve-announce feed · {total} advisories in view</p>
+      </div>
+      {_dummy && <span class="dummy-tag">dummy data</span>}
+    </header>
+
+    <section class="top-row">
+      <article class="card donut-card">
+        <header class="card-head"><h2>Severity mix</h2></header>
+        <div class="donut-wrap">
+          <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} class="donut" role="img" aria-label="Severity distribution donut">
+            {arcs.map(a => (
+              <path d={a.d} fill={sevColor[a.sev]} opacity="0.88">
+                <title>{a.sev}: {a.n}</title>
+              </path>
+            ))}
+            <text x={CENTER} y={CENTER - 4} text-anchor="middle" font-family="ui-monospace, SFMono-Regular, monospace" font-size="22" font-weight="600" fill="#111">{total}</text>
+            <text x={CENTER} y={CENTER + 16} text-anchor="middle" font-family="ui-monospace, SFMono-Regular, monospace" font-size="10" fill="rgba(0,0,0,0.5)">total</text>
+          </svg>
+          <ul class="donut-legend">
+            {sevOrder.map(sev => (
+              <li>
+                <span class="sq" style={`background:${sevColor[sev]}`}></span>
+                <span class="sl-name">{sev}</span>
+                <span class="sl-count">{bySev[sev]}</span>
+                <span class="sl-pct">{total ? Math.round(bySev[sev] / total * 100) : 0}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-head"><h2>CVSS distribution</h2></header>
+        <div class="hist">
+          {cvssHist.map(h => (
+            <div class="hist-col">
+              <div
+                class="hist-bar"
+                style={`height:${(h.count / maxCvssBin) * 100}%; background:${h.bin >= 7 ? sevColor.high : h.bin >= 4 ? sevColor.medium : sevColor.low}`}
+                title={`CVSS ${h.bin}–${h.bin + 1}: ${h.count}`}
+              ></div>
+              <div class="hist-label">{h.bin}</div>
+            </div>
+          ))}
+        </div>
+        <div class="hist-foot">score bucket (low ←→ high)</div>
+      </article>
+    </section>
+
+    <article class="card">
+      <header class="card-head"><h2>By subsystem</h2></header>
+      <ul class="sub-list">
+        {subRows.map(r => (
+          <li>
+            <div class="sub-name">{r.name}/</div>
+            <div class="sub-bar">
+              {r.high > 0 && <div class="seg seg-high" style={`width:${r.high / maxSubTotal * 100}%`} title={`${r.high} high`}></div>}
+              {r.medium > 0 && <div class="seg seg-medium" style={`width:${r.medium / maxSubTotal * 100}%`} title={`${r.medium} medium`}></div>}
+              {r.low > 0 && <div class="seg seg-low" style={`width:${r.low / maxSubTotal * 100}%`} title={`${r.low} low`}></div>}
+            </div>
+            <div class="sub-count">{r.total}</div>
+          </li>
+        ))}
+      </ul>
+    </article>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>All CVEs</h2>
+        <span class="head-sub">sorted by publication date</span>
+      </header>
+      <table class="cve-table">
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>CVE</th>
+            <th>CVSS</th>
+            <th>Subsystem</th>
+            <th>Summary</th>
+            <th>Fixed in</th>
+            <th>Published</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(c => (
+            <tr>
+              <td>
+                <span
+                  class="sev-pill"
+                  style={`background:${sevBg[c.severity]}; color:${sevColor[c.severity]}`}
+                >{c.severity}</span>
+              </td>
+              <td class="mono">
+                {c.url ? <a href={c.url} target="_blank" rel="noopener">{c.id}</a> : c.id}
+              </td>
+              <td class="mono num">{typeof c.cvss === 'number' ? c.cvss.toFixed(1) : '—'}</td>
+              <td class="mono muted"><a class="sublink" href={`/subsystem/${(c.subsystem ?? '').split('/')[0]}/`}>{c.subsystem}</a></td>
+              <td class="sum">{c.summary}</td>
+              <td class="mono muted">{c.fixedIn.join(', ')}</td>
+              <td class="mono muted">{c.published}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell { max-width: 80rem; padding: 1.25rem 1.5rem 2.5rem; }
+  .page-head {
+    margin-bottom: 1.2rem;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.3rem; font-weight: 500; margin: 0;
+  }
+  .meta {
+    margin: 0.2rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.5);
+  }
+  .dummy-tag {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(197,139,46,0.13);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: center;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem 1.3rem;
+    margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500; margin: 0;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .head-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.45);
+  }
+
+  .top-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .donut-wrap {
+    display: flex; align-items: center; gap: 1.5rem;
+  }
+  .donut { width: 160px; height: 160px; flex-shrink: 0; }
+  .donut-legend {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 0.55rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    min-width: 0;
+  }
+  .donut-legend li {
+    display: grid;
+    grid-template-columns: 0.85rem minmax(4rem, 1fr) 2rem 2.5rem;
+    align-items: center; gap: 0.55rem;
+  }
+  .donut-legend .sq {
+    width: 0.7rem; height: 0.7rem; border-radius: 2px;
+  }
+  .sl-name { text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.72rem; color: rgba(0,0,0,0.65); }
+  .sl-count { text-align: right; font-weight: 600; }
+  .sl-pct { text-align: right; font-size: 0.72rem; color: rgba(0,0,0,0.5); }
+
+  .hist {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    align-items: end;
+    gap: 4px;
+    height: 120px;
+  }
+  .hist-col {
+    display: flex; flex-direction: column; align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .hist-bar {
+    width: 100%;
+    min-height: 1px;
+    background: #4f94d4;
+    border-radius: 2px 2px 0 0;
+  }
+  .hist-label {
+    margin-top: 0.3rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem;
+    color: rgba(0,0,0,0.5);
+  }
+  .hist-foot {
+    margin-top: 0.6rem;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem;
+    color: rgba(0,0,0,0.42);
+  }
+
+  .sub-list {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.55rem;
+  }
+  .sub-list li {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr) 2.5rem;
+    align-items: center; gap: 0.75rem;
+  }
+  .sub-name {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sub-bar {
+    display: flex; height: 0.55rem;
+    background: rgba(0,0,0,0.05);
+    border-radius: 2px; overflow: hidden;
+  }
+  .seg { height: 100%; }
+  .seg-high   { background: #e85b4a; }
+  .seg-medium { background: #c58b2e; }
+  .seg-low    { background: #6c757d; }
+  .sub-count {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8rem;
+    text-align: right;
+    color: rgba(0,0,0,0.7);
+  }
+
+  .cve-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .cve-table th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(0,0,0,0.45);
+    text-align: left;
+    padding: 0.4rem 0.6rem 0.4rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .cve-table th.num, .cve-table td.num { text-align: right; }
+  .cve-table td {
+    padding: 0.55rem 0.6rem 0.55rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    vertical-align: top;
+  }
+  .cve-table tr:last-child td { border-bottom: none; }
+  .cve-table .mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+  }
+  .cve-table .muted { color: rgba(0,0,0,0.58); }
+  .cve-table .sum {
+    line-height: 1.35;
+    color: rgba(0,0,0,0.78);
+    max-width: 28rem;
+  }
+  .cve-table a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+  }
+  .cve-table a:hover {
+    color: #2b5c8a;
+    border-bottom-style: solid;
+  }
+  .cve-table a.sublink {
+    border-bottom: none;
+  }
+  .cve-table a.sublink:hover {
+    color: #2b5c8a;
+    text-decoration: underline;
+  }
+  .sev-pill {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.45rem;
+    border-radius: 3px;
+    line-height: 1;
+  }
+
+  @media (max-width: 900px) {
+    .top-row { grid-template-columns: 1fr; }
+    .donut-wrap { flex-direction: column; align-items: flex-start; }
+    .sub-list li { grid-template-columns: 8rem 1fr 2.5rem; }
+  }
+</style>

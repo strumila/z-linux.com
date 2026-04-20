@@ -1,0 +1,231 @@
+---
+import stability from '../../data/stability.json';
+
+const { current, history, n_observations, fit_threshold, fit_status, _dummy } = stability;
+const composite = current.composite;
+const subfactors = current.subfactors;
+
+function band(score) {
+  if (score >= 0.75) return { label: 'steady',   color: '#4a9d5f' };
+  if (score >= 0.60) return { label: 'watchful', color: '#4f94d4' };
+  if (score >= 0.45) return { label: 'elevated', color: '#c58b2e' };
+  return                    { label: 'critical', color: '#e85b4a' };
+}
+const b = band(composite);
+
+const SPARK_W = 320, SPARK_H = 64, pad = 4;
+const vals = history.map(h => h.composite);
+const minV = Math.min(...vals);
+const maxV = Math.max(...vals);
+const rangeV = Math.max(maxV - minV, 0.001);
+const points = history.map((h, i) => {
+  const x = pad + (i / Math.max(history.length - 1, 1)) * (SPARK_W - pad * 2);
+  const y = pad + (1 - (h.composite - minV) / rangeV) * (SPARK_H - pad * 2);
+  return [x, y];
+});
+const pathD = points.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+const areaD = pathD + ` L${SPARK_W - pad} ${SPARK_H - pad} L${pad} ${SPARK_H - pad} Z`;
+const [lastX, lastY] = points[points.length - 1];
+
+const subfactorOrder = ['security', 'regression', 'cadence'];
+---
+<article class="stability">
+  <div class="head">
+    <h2>Kernel Stability Index</h2>
+    {_dummy && <span class="dummy-tag">dummy</span>}
+  </div>
+
+  <div class="main">
+    <div class="score" style={`--band:${b.color}`}>
+      <div class="value">{composite.toFixed(2)}</div>
+      <div class="band">{b.label}</div>
+    </div>
+
+    <div class="trend">
+      <div class="trend-label">trailing {history.length} days</div>
+      <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none" class="spark">
+        <path d={areaD} fill={b.color} opacity="0.12" />
+        <path d={pathD} fill="none" stroke={b.color} stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
+        <circle cx={lastX} cy={lastY} r="3" fill={b.color} />
+      </svg>
+      <div class="trend-range">
+        <span>low {minV.toFixed(2)}</span>
+        <span>high {maxV.toFixed(2)}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="subfactors">
+    {subfactorOrder.map(sf => (
+      <div class="sf-row">
+        <div class="sf-name">{sf}</div>
+        <div class="sf-bar">
+          <div class="sf-fill" style={`width:${subfactors[sf].score * 100}%`}></div>
+        </div>
+        <div class="sf-val">{subfactors[sf].score.toFixed(2)}</div>
+      </div>
+    ))}
+  </div>
+
+  <footer class="meta">
+    <span>loadings: <strong>{fit_status}</strong></span>
+    <span class="dot">·</span>
+    <span>N = {n_observations} / {fit_threshold}</span>
+    <span class="dot">·</span>
+    <span>{fit_status === 'fitted' ? 'SEM fit passing' : `fit attempted nightly once N ≥ ${fit_threshold}`}</span>
+    <span class="spacer"></span>
+    <a class="drill" href="/stability/">View model &amp; subfactors →</a>
+  </footer>
+</article>
+
+<style>
+  .stability {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.09);
+    border-radius: 8px;
+    padding: 1.25rem 1.4rem 1.05rem;
+    margin-bottom: 1rem;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .head h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.76rem;
+    font-weight: 500;
+    margin: 0;
+    color: rgba(0,0,0,0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+  }
+  .dummy-tag {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.6rem;
+    padding: 0.1rem 0.4rem;
+    background: rgba(197,139,46,0.13);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .main {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.5rem;
+    align-items: center;
+    margin-bottom: 1.15rem;
+  }
+  .score {
+    padding-right: 1.5rem;
+    border-right: 1px solid rgba(0,0,0,0.08);
+    min-width: 8rem;
+  }
+  .value {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 3.1rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--band);
+  }
+  .band {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.17em;
+    color: var(--band);
+    margin-top: 0.35rem;
+    opacity: 0.88;
+  }
+  .trend {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+  }
+  .trend-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem;
+    color: rgba(0,0,0,0.5);
+  }
+  .spark {
+    width: 100%;
+    height: 64px;
+    display: block;
+  }
+  .trend-range {
+    display: flex;
+    justify-content: space-between;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem;
+    color: rgba(0,0,0,0.42);
+  }
+  .subfactors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+  }
+  .sf-row {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr) 2.5rem;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  .sf-name {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.76rem;
+    color: rgba(0,0,0,0.7);
+  }
+  .sf-bar {
+    height: 0.55rem;
+    background: rgba(0,0,0,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .sf-fill {
+    height: 100%;
+    background: #4f94d4;
+    opacity: 0.82;
+  }
+  .sf-val {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8rem;
+    color: rgba(0,0,0,0.72);
+    text-align: right;
+  }
+  .meta {
+    padding-top: 0.75rem;
+    border-top: 1px dashed rgba(0,0,0,0.08);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem;
+    color: rgba(0,0,0,0.5);
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+  .meta strong { color: rgba(0,0,0,0.75); font-weight: 500; }
+  .dot { opacity: 0.55; }
+  .spacer { flex: 1; }
+  .drill {
+    color: rgba(0,0,0,0.6);
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+  }
+  .drill:hover {
+    color: #2b5c8a;
+    border-bottom-style: solid;
+  }
+  @media (max-width: 720px) {
+    .main { grid-template-columns: 1fr; }
+    .score {
+      border-right: none;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      padding: 0 0 0.9rem;
+    }
+    .sf-row { grid-template-columns: 5rem 1fr 2.5rem; }
+  }
+</style>

@@ -1,0 +1,375 @@
+---
+import Base from '../layouts/Base.astro';
+import branchesData from '../../data/branches.json';
+import propagation from '../../data/cve-propagation.json';
+import cvesData from '../../data/cves.json';
+
+const { branches, _dummy } = branchesData;
+
+const TYPE_COLOR = {
+  mainline:    '#ff7a5c',
+  integration: '#8f6ed3',
+  stable:      '#4f94d4',
+  longterm:    '#2b5c8a',
+  maintainer:  '#4a9d5f',
+};
+
+const STATUS_COLOR = {
+  'fixed':         { bg: 'rgba(74,157,95,0.20)', fg: '#2f6b3f', label: '✓' },
+  'pending':       { bg: 'rgba(232,91,74,0.17)', fg: '#9a2c1d', label: '●' },
+  'not-affected':  { bg: 'rgba(0,0,0,0.04)',     fg: 'rgba(0,0,0,0.35)', label: '—' },
+};
+
+// KPIs
+const byType = {};
+for (const b of branches) {
+  byType[b.type] = (byType[b.type] ?? 0) + 1;
+}
+
+const cveIds = Object.keys(propagation.propagation);
+const propBranches = propagation.branches;
+
+// Latency stats: for each CVE, time from mainline fix to each branch landing
+const latencies = [];
+for (const cveId of cveIds) {
+  const p = propagation.propagation[cveId];
+  const mainDate = new Date(p.mainlineFixedAt.date);
+  for (const branchName of propBranches) {
+    if (branchName === 'master' || branchName === 'linux-next') continue;
+    const cell = p.perBranch[branchName];
+    if (cell?.status === 'fixed' && cell.date) {
+      const lag = (new Date(cell.date) - mainDate) / 86_400_000;
+      latencies.push({ cveId, branch: branchName, lag });
+    }
+  }
+}
+const avgLag = latencies.length ? (latencies.reduce((a, x) => a + x.lag, 0) / latencies.length) : 0;
+const maxLag = latencies.length ? Math.max(...latencies.map(l => l.lag)) : 0;
+
+// Pending count
+const pendingCount = Object.values(propagation.propagation).reduce((acc, p) => {
+  return acc + Object.values(p.perBranch).filter(c => c.status === 'pending').length;
+}, 0);
+
+// Group branches by type for display
+const groups = ['mainline', 'integration', 'stable', 'longterm', 'maintainer'];
+const branchesByType = groups.map(g => ({
+  type: g,
+  color: TYPE_COLOR[g],
+  items: branches.filter(b => b.type === g),
+})).filter(g => g.items.length > 0);
+
+// CVE severity lookup
+const cveSeverity = {};
+for (const c of cvesData.cves) cveSeverity[c.id] = c.severity;
+const sevColor = { high: '#e85b4a', medium: '#c58b2e', low: '#6c757d' };
+
+function fmt(n) { return n?.toLocaleString?.() ?? n; }
+---
+<Base title="Branches · z-linux.com">
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <h1>Branches</h1>
+        <p class="meta">tracked kernel branches · CVE propagation across stable lines · cherry-pick latency</p>
+      </div>
+      {_dummy && <span class="dummy-tag">dummy data</span>}
+    </header>
+
+    <section class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">branches tracked</div>
+        <div class="kpi-value">{branches.length}</div>
+        <div class="kpi-sub">{Object.entries(byType).map(([t, n]) => `${n} ${t}`).join(' · ')}</div>
+      </div>
+      <div class="kpi" style="--band:#4a9d5f">
+        <div class="kpi-label">avg cherry-pick lag</div>
+        <div class="kpi-value">{avgLag.toFixed(1)}d</div>
+        <div class="kpi-sub">mainline → stable-line</div>
+      </div>
+      <div class="kpi" style="--band:#c58b2e">
+        <div class="kpi-label">max cherry-pick lag</div>
+        <div class="kpi-value">{maxLag.toFixed(0)}d</div>
+        <div class="kpi-sub">worst-case in window</div>
+      </div>
+      <div class="kpi" style="--band:#e85b4a">
+        <div class="kpi-label">pending backports</div>
+        <div class="kpi-value">{pendingCount}</div>
+        <div class="kpi-sub">fix on mainline, not on LTS</div>
+      </div>
+    </section>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>CVE fix propagation</h2>
+        <span class="card-sub">row = CVE · column = branch · ✓ fixed · ● pending · — not affected</span>
+      </header>
+      <div class="matrix-wrap">
+        <table class="prop-matrix">
+          <thead>
+            <tr>
+              <th>CVE</th>
+              <th>Sev</th>
+              {propBranches.map(b => (
+                <th class="branch-col">
+                  <span class="branch-rot">{b}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {cveIds.map(id => {
+              const p = propagation.propagation[id];
+              const sev = cveSeverity[id] ?? 'low';
+              return (
+                <tr>
+                  <td class="mono">
+                    <a href={`/cves/`}>{id}</a>
+                  </td>
+                  <td>
+                    <span class="sev-dot" style={`background:${sevColor[sev]}`} title={sev}></span>
+                  </td>
+                  {propBranches.map(b => {
+                    const cell = p.perBranch[b];
+                    const s = STATUS_COLOR[cell?.status] ?? STATUS_COLOR['not-affected'];
+                    const title = cell?.status === 'fixed'
+                      ? `fixed ${cell.sha} on ${cell.date}`
+                      : cell?.status === 'pending'
+                        ? 'fix pending backport'
+                        : 'not affected';
+                    return (
+                      <td
+                        class="cell"
+                        style={`background:${s.bg}; color:${s.fg}`}
+                        title={title}
+                      >{s.label}</td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <section class="branch-groups">
+      {branchesByType.map(g => (
+        <article class="card">
+          <header class="card-head">
+            <h2>
+              <span class="group-dot" style={`background:${g.color}`}></span>
+              {g.type}
+            </h2>
+            <span class="card-sub">{g.items.length} branch{g.items.length === 1 ? '' : 'es'}</span>
+          </header>
+          <table class="branch-table">
+            <thead>
+              <tr>
+                <th>Branch</th>
+                <th>Role</th>
+                <th class="num">Commits (window)</th>
+                <th class="num">Ahead of master</th>
+                <th>Latest tag</th>
+                <th class="num">Tag age</th>
+              </tr>
+            </thead>
+            <tbody>
+              {g.items.map(b => (
+                <tr>
+                  <td class="mono bname">{b.name}</td>
+                  <td class="muted">{b.role}</td>
+                  <td class="num mono">{fmt(b.commitsInWindow)}</td>
+                  <td class="num mono muted">{fmt(b.aheadOfMaster)}</td>
+                  <td class="mono">{b.lastTag ?? <span class="muted">—</span>}</td>
+                  <td class="num mono muted">{b.daysSinceLastTag != null ? `${b.daysSinceLastTag}d` : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </article>
+      ))}
+    </section>
+
+    <article class="card prose-card">
+      <header class="card-head"><h2>How this feeds risk</h2></header>
+      <p class="prose">
+        Cherry-pick latency is a direct risk signal: a fix that sits on <code>master</code> for 10 days before
+        landing on the LTS most users run is 10 days of exposure. The <strong>pending backports</strong> KPI is
+        the live version of that — it's always shrinking (backports land) or growing (new fixes outpace
+        backport velocity).
+      </p>
+      <p class="prose muted">
+        Dummy data here; when real branch tracking is wired up, this matrix will accept additional LTS lines
+        automatically via the <code>branches</code> array in <code>data/cve-propagation.json</code>.
+      </p>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell { max-width: 84rem; padding: 1.25rem 1.5rem 2.5rem; }
+  .page-head {
+    margin-bottom: 1.2rem;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.3rem; font-weight: 500; margin: 0;
+  }
+  .meta {
+    margin: 0.2rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.5);
+  }
+  .dummy-tag {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(197,139,46,0.13);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: center;
+  }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem; margin-bottom: 1rem;
+  }
+  .kpi {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.9rem 1rem 0.95rem;
+    display: flex; flex-direction: column; gap: 0.22rem;
+    position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--band, #4f94d4);
+  }
+  .kpi-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(0,0,0,0.55);
+  }
+  .kpi-value {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.55rem; font-weight: 600; line-height: 1.08;
+  }
+  .kpi-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.55);
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.3rem; margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500; margin: 0;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  .card-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem; color: rgba(0,0,0,0.45);
+  }
+  .group-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  }
+
+  .matrix-wrap { overflow-x: auto; }
+  .prop-matrix {
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .prop-matrix th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.65rem; font-weight: 500;
+    color: rgba(0,0,0,0.55);
+    padding: 0.3rem 0.4rem;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    text-align: left;
+    vertical-align: bottom;
+    white-space: nowrap;
+  }
+  .prop-matrix th.branch-col {
+    width: 2rem;
+    padding: 0 0.3rem 0.3rem;
+    height: 120px;
+    text-align: center;
+  }
+  .branch-rot {
+    display: inline-block;
+    transform: rotate(-60deg);
+    transform-origin: left top;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.65);
+    white-space: nowrap;
+  }
+  .prop-matrix td {
+    padding: 0.3rem 0.4rem;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+  }
+  .prop-matrix td.cell {
+    text-align: center;
+    font-weight: 600;
+    min-width: 2rem;
+  }
+  .prop-matrix a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+  }
+  .prop-matrix a:hover { color: #2b5c8a; border-bottom-style: solid; }
+  .sev-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  }
+
+  .branch-groups { display: flex; flex-direction: column; }
+  .branch-table {
+    width: 100%; border-collapse: collapse; font-size: 0.82rem;
+  }
+  .branch-table th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.64rem; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    color: rgba(0,0,0,0.45);
+    text-align: left; padding: 0.4rem 0.55rem 0.4rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .branch-table th.num, .branch-table td.num { text-align: right; }
+  .branch-table td {
+    padding: 0.45rem 0.55rem 0.45rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .branch-table .mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+  }
+  .branch-table .bname { font-weight: 500; }
+  .branch-table .muted { color: rgba(0,0,0,0.55); }
+
+  .prose { font-size: 0.87rem; line-height: 1.55; color: rgba(0,0,0,0.78); margin: 0 0 0.8rem; }
+  .prose.muted { color: rgba(0,0,0,0.5); font-size: 0.82rem; }
+  .prose code {
+    font-size: 0.85em;
+    background: rgba(79,148,212,0.09);
+    padding: 0.08em 0.35em;
+    border-radius: 3px;
+  }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .prop-matrix th.branch-col { height: 90px; }
+  }
+</style>

@@ -1,0 +1,68 @@
+---
+interface Props {
+  label: string;
+  value: string | number;
+  sub?: string;
+  accent?: 'blue' | 'coral' | 'red' | 'amber' | 'gray';
+  truncate?: boolean;
+}
+const { label, value, sub, accent = 'gray', truncate = false } = Astro.props;
+---
+<div class={`kpi kpi-${accent}`}>
+  <div class="kpi-label">{label}</div>
+  <div class="kpi-value">{value}</div>
+  {sub && <div class={`kpi-sub ${truncate ? 'truncate' : ''}`}>{sub}</div>}
+</div>
+
+<style>
+  .kpi {
+    background: var(--card, #fff);
+    border: 1px solid var(--border, rgba(0,0,0,0.09));
+    border-radius: 8px;
+    padding: 0.9rem 1rem 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .kpi-blue::before  { background: #4f94d4; }
+  .kpi-coral::before { background: #ff7a5c; }
+  .kpi-red::before   { background: #e85b4a; }
+  .kpi-amber::before { background: #c58b2e; }
+  .kpi-gray::before  { background: rgba(0,0,0,0.2); }
+  .kpi-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(0,0,0,0.55);
+  }
+  .kpi-value {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1.08;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kpi-sub {
+    font-size: 0.76rem;
+    color: rgba(0,0,0,0.55);
+    min-width: 0;
+  }
+  .kpi-sub.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>

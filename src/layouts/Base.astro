@@ -1,0 +1,49 @@
+---
+import Sidebar from '../components/Sidebar.astro';
+interface Props {
+  title?: string;
+}
+const { title = 'z-linux.com' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="layout">
+      <Sidebar />
+      <div class="content"><slot /></div>
+    </div>
+
+    <style is:global>
+      :root {
+        --bg: #fafafa;
+        --card: #fff;
+        --border: rgba(0,0,0,0.09);
+        --text: #111;
+        --muted: rgba(0,0,0,0.55);
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 14rem 1fr;
+        min-height: 100vh;
+        align-items: start;
+      }
+      .content { min-width: 0; }
+      @media (max-width: 720px) {
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </body>
+</html>

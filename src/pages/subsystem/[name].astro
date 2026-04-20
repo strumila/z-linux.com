@@ -1,0 +1,367 @@
+---
+import Base from '../../layouts/Base.astro';
+import subsystemsData from '../../../data/subsystems.json';
+import cvesData from '../../../data/cves.json';
+
+export async function getStaticPaths() {
+  const data = (await import('../../../data/subsystems.json')).default;
+  return data.subsystems.map(s => ({
+    params: { name: s.name },
+    props: { subsystem: s, all: data },
+  }));
+}
+
+const { subsystem, all } = Astro.props;
+
+// Related edges
+const edges = (all.edges ?? [])
+  .filter(e => e.source === subsystem.name || e.target === subsystem.name)
+  .map(e => ({
+    peer: e.source === subsystem.name ? e.target : e.source,
+    weight: e.weight,
+  }))
+  .sort((a, b) => b.weight - a.weight);
+const maxEdgeWeight = Math.max(1, ...edges.map(e => e.weight));
+
+// Per-day heatmap for this subsystem
+const dailyHeat = (all.heatmap ?? [])
+  .filter(h => h.subsystem === subsystem.name)
+  .sort((a, b) => a.date.localeCompare(b.date));
+const maxDaily = Math.max(1, ...dailyHeat.map(d => d.count));
+const totalFromHeat = dailyHeat.reduce((a, d) => a + d.count, 0);
+
+// CVEs in this subsystem
+const relatedCves = (cvesData.cves ?? [])
+  .filter(c => (c.subsystem ?? '').split('/')[0] === subsystem.name)
+  .sort((a, b) => b.published.localeCompare(a.published));
+
+// Rank
+const sortedSubs = [...all.subsystems].sort((a, b) => b.commits - a.commits);
+const rank = sortedSubs.findIndex(s => s.name === subsystem.name) + 1;
+const totalCommits = all.window?.totalCommits ?? sortedSubs.reduce((a, s) => a + s.commits, 0);
+
+// Sparkline
+const SW = 720, SH = 100, pad = 6;
+const vals = dailyHeat.map(d => d.count);
+const pts = dailyHeat.map((d, i) => {
+  const x = pad + (i / Math.max(dailyHeat.length - 1, 1)) * (SW - pad * 2);
+  const y = pad + (1 - d.count / maxDaily) * (SH - pad * 2);
+  return [x, y];
+});
+const path = pts.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+const area = path + ` L${SW - pad} ${SH - pad} L${pad} ${SH - pad} Z`;
+
+const sevColor = { high: '#e85b4a', medium: '#c58b2e', low: '#6c757d' };
+const sevBg = {
+  high:   'rgba(232,91,74,0.14)',
+  medium: 'rgba(197,139,46,0.17)',
+  low:    'rgba(108,117,125,0.14)',
+};
+
+function fmt(n) { return n.toLocaleString(); }
+function pct(n, of) { return of ? `${((n / of) * 100).toFixed(1)}%` : '—'; }
+---
+<Base title={`${subsystem.name}/ · subsystem · z-linux.com`}>
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <p class="crumb"><a href="/commits/">← Commits</a></p>
+        <h1>{subsystem.name}/</h1>
+        <p class="meta">top-level subsystem · ranked #{rank} of {sortedSubs.length} by commits</p>
+      </div>
+    </header>
+
+    <section class="kpi-row">
+      <div class="kpi" style="--band:#4f94d4">
+        <div class="kpi-label">commits</div>
+        <div class="kpi-value">{fmt(subsystem.commits)}</div>
+        <div class="kpi-sub">{pct(subsystem.commits, totalCommits)} of all</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">authors</div>
+        <div class="kpi-value">{fmt(subsystem.authors)}</div>
+      </div>
+      <div class="kpi" style="--band:#ff7a5c">
+        <div class="kpi-label">file touches</div>
+        <div class="kpi-value">{fmt(subsystem.churn)}</div>
+        <div class="kpi-sub">{(subsystem.churn / Math.max(1, subsystem.commits)).toFixed(1)}/commit</div>
+      </div>
+      <div class="kpi" style="--band:#e85b4a">
+        <div class="kpi-label">open CVEs</div>
+        <div class="kpi-value">{relatedCves.length}</div>
+        <div class="kpi-sub">{relatedCves.filter(c => c.severity === 'high').length} high</div>
+      </div>
+    </section>
+
+    {dailyHeat.length > 0 && (
+      <article class="card">
+        <header class="card-head">
+          <h2>Daily activity</h2>
+          <span class="head-sub">{dailyHeat[0].date} → {dailyHeat[dailyHeat.length - 1].date}</span>
+        </header>
+        <svg viewBox={`0 0 ${SW} ${SH}`} class="spark" preserveAspectRatio="none" role="img" aria-label={`${subsystem.name} daily commits`}>
+          <path d={area} fill="#4f94d4" opacity="0.14" />
+          <path d={path} fill="none" stroke="#4f94d4" stroke-width="1.8" stroke-linejoin="round" />
+          {pts.map(([x, y], i) => (
+            <>
+              <circle cx={x} cy={y} r="2.5" fill="#4f94d4" />
+              <title>{dailyHeat[i].date}: {dailyHeat[i].count}</title>
+            </>
+          ))}
+        </svg>
+        <div class="spark-foot">peak {maxDaily} · total {fmt(totalFromHeat)}</div>
+      </article>
+    )}
+
+    <section class="grid-row">
+      <article class="card">
+        <header class="card-head">
+          <h2>Co-touched subsystems</h2>
+          <span class="head-sub">edges by commit co-occurrence</span>
+        </header>
+        {edges.length === 0 ? (
+          <p class="empty">No co-occurrence edges in window.</p>
+        ) : (
+          <ul class="edge-list">
+            {edges.map(e => (
+              <li>
+                <div class="edge-name">
+                  <a href={`/subsystem/${e.peer}/`}>{e.peer}/</a>
+                </div>
+                <div class="edge-bar">
+                  <div class="edge-fill" style={`width:${(e.weight / maxEdgeWeight) * 100}%`}></div>
+                </div>
+                <div class="edge-count">{e.weight}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <h2>Recent CVEs</h2>
+          <span class="head-sub">{relatedCves.length} in window</span>
+        </header>
+        {relatedCves.length === 0 ? (
+          <p class="empty">No CVEs affecting {subsystem.name}/ in window.</p>
+        ) : (
+          <ul class="cve-list">
+            {relatedCves.map(c => (
+              <li>
+                <span class="sev" style={`background:${sevBg[c.severity]}; color:${sevColor[c.severity]}`}>{c.severity}</span>
+                <div class="cve-body">
+                  <div class="cve-id">
+                    {c.url ? <a href={c.url} target="_blank" rel="noopener">{c.id}</a> : c.id}
+                    <span class="muted"> · {c.subsystem}</span>
+                  </div>
+                  <div class="cve-sum">{c.summary}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+    </section>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>Nearby subsystems</h2>
+        <span class="head-sub">ranked by commits · click to drill</span>
+      </header>
+      <table class="peer-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Subsystem</th>
+            <th class="num">Commits</th>
+            <th class="num">Authors</th>
+            <th class="num">Churn</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedSubs.slice(0, 12).map((s, i) => (
+            <tr class={s.name === subsystem.name ? 'self' : ''}>
+              <td class="mono muted">{i + 1}</td>
+              <td class="sname"><a href={`/subsystem/${s.name}/`}>{s.name}/</a></td>
+              <td class="num mono">{fmt(s.commits)}</td>
+              <td class="num mono">{fmt(s.authors)}</td>
+              <td class="num mono muted">{fmt(s.churn)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell { max-width: 76rem; padding: 1.25rem 1.5rem 2.5rem; }
+  .page-head { margin-bottom: 1.2rem; }
+  .crumb {
+    margin: 0 0 0.35rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+  }
+  .crumb a { color: rgba(0,0,0,0.55); text-decoration: none; }
+  .crumb a:hover { color: #2b5c8a; }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.8rem; font-weight: 500; margin: 0;
+  }
+  .meta {
+    margin: 0.3rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.76rem; color: rgba(0,0,0,0.55);
+  }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem; margin-bottom: 1rem;
+  }
+  .kpi {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.9rem 1rem 0.95rem;
+    display: flex; flex-direction: column; gap: 0.22rem;
+    position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--band, rgba(0,0,0,0.2));
+  }
+  .kpi-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(0,0,0,0.55);
+  }
+  .kpi-value {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.55rem; font-weight: 600; line-height: 1.08;
+  }
+  .kpi-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.55);
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.3rem; margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500; margin: 0;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .head-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem; color: rgba(0,0,0,0.45);
+  }
+
+  .spark { width: 100%; height: 120px; display: block; }
+  .spark-foot {
+    margin-top: 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.5);
+  }
+
+  .grid-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .edge-list, .cve-list {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 0.55rem;
+  }
+  .edge-list li {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr) 2.5rem;
+    align-items: center; gap: 0.55rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+  }
+  .edge-name a {
+    color: inherit; text-decoration: none;
+  }
+  .edge-name a:hover { color: #2b5c8a; text-decoration: underline; }
+  .edge-bar {
+    height: 0.45rem; background: rgba(0,0,0,0.06);
+    border-radius: 2px; overflow: hidden;
+  }
+  .edge-fill {
+    height: 100%; background: #4f94d4; opacity: 0.78;
+  }
+  .edge-count {
+    text-align: right; color: rgba(0,0,0,0.65);
+  }
+
+  .cve-list li {
+    display: grid;
+    grid-template-columns: 3.3rem minmax(0, 1fr);
+    gap: 0.6rem; align-items: flex-start;
+  }
+  .sev {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.6rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 0.22rem 0.35rem; border-radius: 3px;
+    text-align: center; line-height: 1; margin-top: 0.15rem;
+  }
+  .cve-body { min-width: 0; }
+  .cve-id {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem; font-weight: 500;
+  }
+  .cve-id a { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
+  .cve-id a:hover { color: #2b5c8a; border-bottom-style: solid; }
+  .cve-sum {
+    font-size: 0.78rem; color: rgba(0,0,0,0.62);
+    line-height: 1.35; margin-top: 0.15rem;
+  }
+  .muted { color: rgba(0,0,0,0.5); }
+  .empty {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.8rem; color: rgba(0,0,0,0.45);
+    margin: 0;
+  }
+
+  .peer-table {
+    width: 100%; border-collapse: collapse; font-size: 0.82rem;
+  }
+  .peer-table th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.64rem; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: rgba(0,0,0,0.45); text-align: left;
+    padding: 0.4rem 0.55rem 0.4rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .peer-table th.num, .peer-table td.num { text-align: right; }
+  .peer-table td {
+    padding: 0.42rem 0.55rem 0.42rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .peer-table tr.self td {
+    background: rgba(79,148,212,0.06); font-weight: 500;
+  }
+  .peer-table .mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+  }
+  .peer-table .muted { color: rgba(0,0,0,0.55); }
+  .peer-table .sname a {
+    color: inherit; text-decoration: none;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+  }
+  .peer-table .sname a:hover { color: #2b5c8a; text-decoration: underline; }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-row { grid-template-columns: 1fr; }
+  }
+</style>

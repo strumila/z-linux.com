@@ -1,0 +1,441 @@
+---
+import Base from '../layouts/Base.astro';
+import Semplot from '../components/Semplot.jsx';
+import stability from '../../data/stability.json';
+
+const {
+  current, history, loadings, hierarchy,
+  n_observations, fit_threshold, fit_status, fit_metadata,
+  _dummy,
+} = stability;
+
+function band(score) {
+  if (score >= 0.75) return { label: 'steady',   color: '#4a9d5f' };
+  if (score >= 0.60) return { label: 'watchful', color: '#4f94d4' };
+  if (score >= 0.45) return { label: 'elevated', color: '#c58b2e' };
+  return                    { label: 'critical', color: '#e85b4a' };
+}
+
+const SUBFACTOR_ORDER = ['security', 'regression', 'cadence'];
+const SUBFACTOR_BLURB = {
+  security:   'Observable security pressure in the rolling window — CVE volume, severity, and topical spread.',
+  regression: 'Commit-stream turbulence — reverts, Fixes: trailers, and daily-count variance.',
+  cadence:    'Release-lifecycle signals — release age, LTS EOL distance, stable-line age.',
+};
+const INDICATOR_LABELS = {
+  cve_intensity:          'CVE intensity (Σ severity)',
+  cve_high_count:         'CVE high count',
+  cve_dispersion:         'CVE subsystem dispersion',
+  revert_rate:            'Revert rate',
+  fixes_density:          'Fixes: trailer density',
+  commit_variance:        'Commit-count variance',
+  churn_concentration:    'Churn concentration (Gini)',
+  point_release_age_days: 'Days since last point release',
+  lts_eol_distance_days:  'LTS EOL distance (max)',
+  stable_line_age_days:   'Stable-line age (placeholder)',
+};
+
+function sparkline(W, H, pad, vals) {
+  const minV = Math.min(...vals), maxV = Math.max(...vals);
+  const rangeV = Math.max(maxV - minV, 0.001);
+  const pts = vals.map((v, i) => {
+    const x = pad + (i / Math.max(vals.length - 1, 1)) * (W - pad * 2);
+    const y = pad + (1 - (v - minV) / rangeV) * (H - pad * 2);
+    return [x, y];
+  });
+  const path = pts.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+  const area = path + ` L${W - pad} ${H - pad} L${pad} ${H - pad} Z`;
+  return { path, area, pts, minV, maxV };
+}
+
+function fmtValue(v) {
+  if (typeof v !== 'number') return v;
+  if (Math.abs(v) < 1 && v !== 0) return v.toFixed(4);
+  return v.toLocaleString();
+}
+
+function signIcon(loading) {
+  if (loading > 0) return { icon: '↑', color: '#4a9d5f', aria: 'positive loading' };
+  if (loading < 0) return { icon: '↓', color: '#e85b4a', aria: 'negative loading' };
+  return { icon: '·', color: 'rgba(0,0,0,0.35)', aria: 'neutral loading' };
+}
+
+const b = band(current.composite);
+const bigSpark = sparkline(720, 96, 6, history.map(h => h.composite));
+const bigLast = bigSpark.pts[bigSpark.pts.length - 1];
+
+const subCards = SUBFACTOR_ORDER.map(sf => {
+  const score = current.subfactors[sf].score;
+  const sb = band(score);
+  const spark = sparkline(220, 44, 3, history.map(h => h[`${sf}_score`]));
+  const last = spark.pts[spark.pts.length - 1];
+  const indicators = Object.entries(current.subfactors[sf].indicators);
+  return { sf, score, sb, spark, last, indicators };
+});
+---
+<Base title="Stability · z-linux.com">
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <h1>Kernel Stability Index</h1>
+        <p class="meta">hierarchical reflective SEM · updated {new Date(stability.fetchedAt).toISOString().slice(0, 16).replace('T', ' ')}Z</p>
+      </div>
+      {_dummy && <span class="dummy-tag">dummy data</span>}
+    </header>
+
+    <article class="hero" style={`--band:${b.color}`}>
+      <div class="hero-score">
+        <div class="hero-num">{current.composite.toFixed(3)}</div>
+        <div class="hero-band">{b.label}</div>
+      </div>
+      <div class="hero-trend">
+        <div class="hero-label">composite · trailing {history.length} days</div>
+        <svg viewBox="0 0 720 96" preserveAspectRatio="none" class="hero-spark">
+          <path d={bigSpark.area} fill={b.color} opacity="0.1" />
+          <path d={bigSpark.path} fill="none" stroke={b.color} stroke-width="1.8" stroke-linejoin="round" />
+          <circle cx={bigLast[0]} cy={bigLast[1]} r="3.5" fill={b.color} />
+        </svg>
+        <div class="hero-range">
+          <span>low {bigSpark.minV.toFixed(3)}</span>
+          <span>high {bigSpark.maxV.toFixed(3)}</span>
+        </div>
+      </div>
+    </article>
+
+    <section class="subfactor-row">
+      {subCards.map(({ sf, score, sb, spark, last, indicators }) => (
+        <article class="sf-card" style={`--band:${sb.color}`}>
+          <header class="sf-head">
+            <h3>{sf}</h3>
+            <div class="sf-score">
+              <span class="sf-num">{score.toFixed(3)}</span>
+              <span class="sf-band">{sb.label}</span>
+            </div>
+          </header>
+          <p class="sf-blurb">{SUBFACTOR_BLURB[sf]}</p>
+          <svg viewBox="0 0 220 44" preserveAspectRatio="none" class="sf-spark">
+            <path d={spark.area} fill={sb.color} opacity="0.14" />
+            <path d={spark.path} fill="none" stroke={sb.color} stroke-width="1.3" />
+            <circle cx={last[0]} cy={last[1]} r="2.5" fill={sb.color} />
+          </svg>
+          <table class="ind-table">
+            <tbody>
+              {indicators.map(([name, value]) => {
+                const s = signIcon(loadings[sf][name]);
+                return (
+                  <tr>
+                    <td class="ind-sign" style={`color:${s.color}`} title={s.aria}>{s.icon}</td>
+                    <td class="ind-name">{INDICATOR_LABELS[name] ?? name}</td>
+                    <td class="ind-val">{fmtValue(value)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </article>
+      ))}
+    </section>
+
+    <article class="card semplot-card">
+      <header class="card-head">
+        <h2>Measurement model</h2>
+        <span class="card-sub">higher-order latent → 3 first-order latents → 9 reflective indicators</span>
+      </header>
+      <Semplot data={stability} client:visible />
+    </article>
+
+    <article class="card model-card">
+      <header class="card-head"><h2>Model &amp; fit</h2></header>
+      <p class="prose">
+        The composite is produced by a hierarchical reflective measurement model:
+        a higher-order latent <code>stability</code> caused three first-order latents
+        (<code>security</code>, <code>regression</code>, <code>cadence</code>), which in turn
+        cause three observed indicators each. Indicators are z-scored against rolling
+        history; subfactor scores are a sigmoid of their weighted z-sum; the composite is
+        an equally-weighted average of subfactor scores.
+      </p>
+      <p class="prose">
+        Loadings start <strong>theoretical</strong> (sign per theory, equal magnitude within
+        subfactor). Once <strong>N ≥ {fit_threshold}</strong> daily observations accumulate, a
+        semopy fit runs each night; on clean convergence, fitted loadings replace the
+        theoretical prior. The cron never crashes on fit failure — fail-soft back to theory.
+      </p>
+      <dl class="facts">
+        <div><dt>loadings</dt><dd><strong>{fit_status}</strong></dd></div>
+        <div><dt>observations</dt><dd>{n_observations} / {fit_threshold}</dd></div>
+        <div><dt>CFI</dt><dd>{fit_metadata.cfi != null ? fit_metadata.cfi.toFixed(3) : '—'}</dd></div>
+        <div><dt>RMSEA</dt><dd>{fit_metadata.rmsea != null ? fit_metadata.rmsea.toFixed(3) : '—'}</dd></div>
+        <div><dt>hierarchy</dt><dd>equal · {Object.values(hierarchy).map(w => w.toFixed(2)).join(' / ')}</dd></div>
+      </dl>
+      <p class="prose">
+        Full specification in <code>docs/stability-model.md</code>. Known limitations:
+        stable-line age is currently a placeholder constant; historical bootstrap (to reach
+        N ≈ 100 on day one) is planned.
+      </p>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell {
+    max-width: 80rem;
+    padding: 1.25rem 1.5rem 2.5rem;
+  }
+  .page-head {
+    margin-bottom: 1.4rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+  .meta {
+    margin: 0.2rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+    color: rgba(0,0,0,0.5);
+  }
+  .dummy-tag {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(197,139,46,0.13);
+    color: #8b6620;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: center;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2rem;
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1rem;
+  }
+  .hero-score {
+    padding-right: 2rem;
+    border-right: 1px solid rgba(0,0,0,0.08);
+  }
+  .hero-num {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 4rem;
+    font-weight: 600;
+    line-height: 0.95;
+    color: var(--band);
+  }
+  .hero-band {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.17em;
+    color: var(--band);
+    opacity: 0.88;
+    margin-top: 0.4rem;
+  }
+  .hero-trend {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .hero-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+    color: rgba(0,0,0,0.5);
+  }
+  .hero-spark { width: 100%; height: 96px; display: block; }
+  .hero-range {
+    display: flex;
+    justify-content: space-between;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.68rem;
+    color: rgba(0,0,0,0.42);
+  }
+
+  .subfactor-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .sf-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.1rem 1.15rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .sf-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--band);
+  }
+  .sf-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+  .sf-card h3 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.9rem;
+    margin: 0;
+    font-weight: 500;
+    text-transform: lowercase;
+  }
+  .sf-score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+  .sf-num {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--band);
+  }
+  .sf-band {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--band);
+    opacity: 0.85;
+  }
+  .sf-blurb {
+    font-size: 0.76rem;
+    color: rgba(0,0,0,0.58);
+    margin: 0 0 0.7rem;
+    line-height: 1.4;
+  }
+  .sf-spark {
+    width: 100%;
+    height: 44px;
+    display: block;
+    margin-bottom: 0.6rem;
+  }
+  .ind-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.76rem;
+  }
+  .ind-table td {
+    padding: 0.3rem 0.1rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+  .ind-table tr:last-child td { border-bottom: none; }
+  .ind-sign {
+    width: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  .ind-name {
+    color: rgba(0,0,0,0.7);
+    padding-right: 0.5rem;
+  }
+  .ind-val {
+    text-align: right;
+    color: rgba(0,0,0,0.8);
+    white-space: nowrap;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.35rem;
+    margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+    margin: 0;
+    color: rgba(0,0,0,0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+  }
+  .card-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+    color: rgba(0,0,0,0.5);
+  }
+
+  .prose {
+    font-size: 0.87rem;
+    line-height: 1.55;
+    color: rgba(0,0,0,0.78);
+    margin: 0 0 0.9rem;
+  }
+  .prose code {
+    font-size: 0.85em;
+    background: rgba(79,148,212,0.09);
+    padding: 0.08em 0.35em;
+    border-radius: 3px;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem 1rem;
+    margin: 0.8rem 0 1rem;
+    padding: 0.9rem 1rem;
+    background: rgba(0,0,0,0.02);
+    border-radius: 6px;
+  }
+  .facts div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .facts dt {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(0,0,0,0.45);
+    margin: 0;
+  }
+  .facts dd {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.85rem;
+    color: rgba(0,0,0,0.8);
+    margin: 0;
+  }
+
+  @media (max-width: 900px) {
+    .subfactor-row { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: 1fr; gap: 1rem; }
+    .hero-score {
+      padding-right: 0;
+      border-right: none;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      padding-bottom: 1rem;
+    }
+  }
+</style>

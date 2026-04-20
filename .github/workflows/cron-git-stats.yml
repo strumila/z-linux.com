@@ -1,0 +1,42 @@
+name: Git stats
+
+on:
+  schedule:
+    - cron: '30 3 * * *'        # 03:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .cache/linux
+          key: linux-git-${{ github.run_id }}
+          restore-keys: linux-git-
+      - name: Clone or fetch
+        run: |
+          if [ -d .cache/linux/.git ]; then
+            git -C .cache/linux fetch --depth=5000 origin master
+          else
+            git clone --depth=5000 --filter=blob:none \
+              https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git \
+              .cache/linux
+          fi
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node scripts/fetch-git-stats.mjs
+      - name: Commit if changed
+        run: |
+          git config user.name  "cron-bot"
+          git config user.email "cron@z-linux.com"
+          git add data/commits.json data/subsystems.json
+          git diff --staged --quiet || {
+            git commit -m "chore(data): nightly git stats"
+            git push
+          }

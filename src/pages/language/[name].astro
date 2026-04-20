@@ -1,0 +1,363 @@
+---
+import Base from '../../layouts/Base.astro';
+import languagesData from '../../../data/languages.json';
+
+export async function getStaticPaths() {
+  const toSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const data = (await import('../../../data/languages.json')).default;
+  return data.languages.map(l => ({
+    params: { name: toSlug(l.name) },
+    props: { language: l, all: data },
+  }));
+}
+
+function slug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
+
+const { language, all } = Astro.props;
+const { timeSeries } = all;
+const total = all.languages.reduce((a, l) => a + l.commits, 0);
+
+const PALETTE = {
+  C: '#4f94d4', Rust: '#ff7a5c', Assembly: '#8f6ed3', 'C++': '#5fa5a5',
+  Kconfig: '#c58b2e', Make: '#d46b8f', Markdown: '#4a9d5f', YAML: '#2b5c8a',
+  Shell: '#6c757d', Python: '#c55050', Perl: '#a08060', Other: 'rgba(0,0,0,0.28)',
+};
+const color = PALETTE[language.name] ?? '#6c757d';
+
+const MATURITY_LABEL = {
+  growing:   { text: 'growing',   color: '#4a9d5f' },
+  plateau:   { text: 'plateau',   color: '#4f94d4' },
+  declining: { text: 'declining', color: '#c58b2e' },
+  mixed:     { text: 'mixed',     color: '#6c757d' },
+};
+const m = MATURITY_LABEL[language.maturity] ?? MATURITY_LABEL.mixed;
+
+// Per-day series for this language
+const series = timeSeries.map(t => ({ date: t.date, count: t[language.name] ?? 0 }));
+const vals = series.map(s => s.count);
+const maxV = Math.max(...vals, 1);
+
+// Sparkline
+const SW = 720, SH = 120, pad = 6;
+const pts = series.map((s, i) => {
+  const x = pad + (i / Math.max(series.length - 1, 1)) * (SW - pad * 2);
+  const y = pad + (1 - s.count / maxV) * (SH - pad * 2);
+  return [x, y];
+});
+const path = pts.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+const area = path + ` L${SW - pad} ${SH - pad} L${pad} ${SH - pad} Z`;
+
+// Peer comparison: rank among languages
+const sorted = [...all.languages].sort((a, b) => b.commits - a.commits);
+const rank = sorted.findIndex(l => l.name === language.name) + 1;
+
+// Relative-share across 5 key metrics for the comparison row
+const totalLines = sorted.reduce((a, l) => a + l.linesAdded + l.linesRemoved, 0);
+const totalAuthors = sorted.reduce((a, l) => a + l.authors, 0);
+const totalFiles = sorted.reduce((a, l) => a + l.files, 0);
+
+function fmt(n) { return n.toLocaleString(); }
+function pct(n, of) { return of ? `${((n / of) * 100).toFixed(2)}%` : '—'; }
+
+const daysInTree = Math.floor((new Date('2026-04-19') - new Date(language.firstCommit)) / 86_400_000);
+const yearsInTree = (daysInTree / 365).toFixed(1);
+---
+<Base title={`${language.name} · languages · z-linux.com`}>
+  <div class="shell">
+    <header class="page-head">
+      <div>
+        <p class="crumb"><a href="/languages/">← Languages</a></p>
+        <h1>
+          <span class="sq-big" style={`background:${color}`}></span>
+          {language.name}
+        </h1>
+        <p class="meta">
+          extensions: {language.extensions.map(e => <code>{e}</code>).reduce((acc, el, i) => i === 0 ? [el] : [...acc, ' · ', el], [])}
+          · first commit {language.firstCommit} ({yearsInTree}y in-tree)
+        </p>
+      </div>
+      <span class="maturity-pill" style={`background:${m.color}22; color:${m.color}`}>{m.text}</span>
+    </header>
+
+    <section class="kpi-row">
+      <div class="kpi" style={`--band:${color}`}>
+        <div class="kpi-label">rank by commits</div>
+        <div class="kpi-value">#{rank}</div>
+        <div class="kpi-sub">of {sorted.length} languages</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">share</div>
+        <div class="kpi-value">{pct(language.commits, total)}</div>
+        <div class="kpi-sub">{fmt(language.commits)} / {fmt(total)} commits</div>
+      </div>
+      <div class="kpi" style="--band:#4a9d5f">
+        <div class="kpi-label">LOC delta</div>
+        <div class="kpi-value mono-sm">+{fmt(language.linesAdded)}<br/><span class="neg">−{fmt(language.linesRemoved)}</span></div>
+        <div class="kpi-sub">net +{fmt(language.linesAdded - language.linesRemoved)}</div>
+      </div>
+      <div class="kpi" style="--band:#c58b2e">
+        <div class="kpi-label">30d growth</div>
+        <div class="kpi-value mono-sm">
+          {language.authorsGrowth30d > 0 ? '+' : ''}{language.authorsGrowth30d}A
+          {' · '}
+          {language.fileCountGrowth30d > 0 ? '+' : ''}{language.fileCountGrowth30d}F
+        </div>
+        <div class="kpi-sub">authors / files</div>
+      </div>
+    </section>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>Daily commits</h2>
+        <span class="head-sub">{series[0].date} → {series[series.length - 1].date}</span>
+      </header>
+      <svg viewBox={`0 0 ${SW} ${SH}`} class="spark" preserveAspectRatio="none" role="img" aria-label={`${language.name} daily commits`}>
+        <path d={area} fill={color} opacity="0.14" />
+        <path d={path} fill="none" stroke={color} stroke-width="1.8" stroke-linejoin="round" />
+        {pts.map(([x, y]) => <circle cx={x} cy={y} r="2" fill={color} />)}
+      </svg>
+      <div class="spark-foot">peak {maxV} commits · total {fmt(vals.reduce((a, b) => a + b, 0))}</div>
+    </article>
+
+    <section class="grid-row">
+      <article class="card">
+        <header class="card-head"><h2>Indicators</h2></header>
+        <dl class="indicators">
+          <div><dt>Revert rate</dt><dd>{(language.revertRate * 100).toFixed(2)}%</dd></div>
+          <div><dt>Fixes: density</dt><dd>{(language.fixesDensity * 100).toFixed(1)}%</dd></div>
+          <div><dt>Churn concentration (Gini)</dt><dd>{language.churnConcentration.toFixed(2)}</dd></div>
+          <div><dt>CVEs (window)</dt><dd>{language.cveCount}</dd></div>
+          <div><dt>Authors</dt><dd>{fmt(language.authors)} <span class="muted">({pct(language.authors, totalAuthors)} of all-lang)</span></dd></div>
+          <div><dt>Files</dt><dd>{fmt(language.files)} <span class="muted">({pct(language.files, totalFiles)} of all-lang)</span></dd></div>
+          <div><dt>LOC delta share</dt><dd>{pct(language.linesAdded + language.linesRemoved, totalLines)}</dd></div>
+        </dl>
+      </article>
+
+      <article class="card">
+        <header class="card-head"><h2>Context</h2></header>
+        <p class="prose">
+          <strong>{language.name}</strong> has been in-tree for <strong>{yearsInTree} years</strong>
+          ({daysInTree.toLocaleString()} days since its first commit on {language.firstCommit}).
+        </p>
+        <p class="prose">
+          {language.maturity === 'growing' && 'Growth signal is positive on both contributor count and file count — expect this share to rise.'}
+          {language.maturity === 'plateau' && 'File count and contributor base are roughly flat over the last 30 days — this is a mature substrate.'}
+          {language.maturity === 'declining' && 'File count and contributor base are shrinking — code is consolidating into other languages or being removed.'}
+          {language.maturity === 'mixed' && 'Heterogeneous bucket; sub-classifications would tell a cleaner story.'}
+        </p>
+        <p class="prose muted">
+          Risk attribution by language requires joining <code>data/cves.json</code> affected-file lists to
+          language classification — currently stubbed.
+        </p>
+      </article>
+    </section>
+
+    <article class="card">
+      <header class="card-head">
+        <h2>All languages</h2>
+        <span class="head-sub">ranked by commits</span>
+      </header>
+      <table class="peer-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Language</th>
+            <th class="num">Commits</th>
+            <th class="num">Share</th>
+            <th class="num">Authors</th>
+            <th class="num">Files</th>
+            <th>Maturity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((l, i) => (
+            <tr class={l.name === language.name ? 'self' : ''}>
+              <td class="mono muted">{i + 1}</td>
+              <td class="lname">
+                <a href={`/language/${slug(l.name)}/`}>
+                  <span class="sq-inline" style={`background:${PALETTE[l.name] ?? '#6c757d'}`}></span>
+                  {l.name}
+                </a>
+              </td>
+              <td class="num mono">{fmt(l.commits)}</td>
+              <td class="num mono muted">{pct(l.commits, total)}</td>
+              <td class="num mono">{fmt(l.authors)}</td>
+              <td class="num mono muted">{fmt(l.files)}</td>
+              <td class="mono muted">{l.maturity}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .shell { max-width: 76rem; padding: 1.25rem 1.5rem 2.5rem; }
+  .page-head {
+    margin-bottom: 1.2rem;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+  }
+  .crumb {
+    margin: 0 0 0.35rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem;
+  }
+  .crumb a { color: rgba(0,0,0,0.55); text-decoration: none; }
+  .crumb a:hover { color: #2b5c8a; }
+  h1 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.8rem; font-weight: 500; margin: 0;
+    display: inline-flex; align-items: center; gap: 0.7rem;
+  }
+  .sq-big { width: 1rem; height: 1rem; border-radius: 2px; display: inline-block; }
+  .meta {
+    margin: 0.35rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.76rem; color: rgba(0,0,0,0.55);
+  }
+  .meta code {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.75rem;
+    background: rgba(79,148,212,0.1);
+    padding: 0.08em 0.3em;
+    border-radius: 3px;
+  }
+  .maturity-pill {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem; padding: 0.25rem 0.55rem;
+    border-radius: 4px; letter-spacing: 0.08em;
+    text-transform: lowercase; font-weight: 500;
+    align-self: center;
+  }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem; margin-bottom: 1rem;
+  }
+  .kpi {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.9rem 1rem 0.95rem;
+    display: flex; flex-direction: column; gap: 0.22rem;
+    position: relative; overflow: hidden; min-width: 0;
+  }
+  .kpi::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--band, rgba(0,0,0,0.2));
+  }
+  .kpi-label {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.66rem; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(0,0,0,0.55);
+  }
+  .kpi-value {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 1.55rem; font-weight: 600; line-height: 1.08;
+  }
+  .kpi-value.mono-sm { font-size: 0.95rem; line-height: 1.2; }
+  .kpi-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.55);
+  }
+  .neg { color: rgba(0,0,0,0.55); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.3rem; margin-bottom: 1rem;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem;
+  }
+  .card h2 {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.74rem; font-weight: 500; margin: 0;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .head-sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.7rem; color: rgba(0,0,0,0.45);
+  }
+
+  .spark { width: 100%; height: 140px; display: block; }
+  .spark-foot {
+    margin-top: 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.5);
+  }
+
+  .grid-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .indicators { display: grid; grid-template-columns: 1fr; gap: 0.55rem; margin: 0; }
+  .indicators div {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 0.4rem;
+  }
+  .indicators dt {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.72rem; color: rgba(0,0,0,0.55);
+    margin: 0;
+  }
+  .indicators dd {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.85rem; margin: 0; text-align: right;
+  }
+  .indicators .muted { color: rgba(0,0,0,0.45); font-size: 0.75rem; }
+
+  .prose {
+    font-size: 0.87rem; line-height: 1.55;
+    color: rgba(0,0,0,0.78);
+    margin: 0 0 0.8rem;
+  }
+  .prose.muted { color: rgba(0,0,0,0.5); font-size: 0.82rem; }
+  .prose code {
+    font-size: 0.85em;
+    background: rgba(79,148,212,0.09);
+    padding: 0.08em 0.35em;
+    border-radius: 3px;
+  }
+
+  .peer-table {
+    width: 100%; border-collapse: collapse; font-size: 0.82rem;
+  }
+  .peer-table th {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.64rem; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: rgba(0,0,0,0.45);
+    text-align: left;
+    padding: 0.4rem 0.55rem 0.4rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .peer-table th.num, .peer-table td.num { text-align: right; }
+  .peer-table td {
+    padding: 0.42rem 0.55rem 0.42rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .peer-table tr.self td {
+    background: rgba(79,148,212,0.06);
+    font-weight: 500;
+  }
+  .peer-table .mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+  }
+  .peer-table .muted { color: rgba(0,0,0,0.55); }
+  .peer-table .lname a {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    color: inherit; text-decoration: none;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.82rem;
+  }
+  .peer-table .lname a:hover { color: #2b5c8a; text-decoration: underline; }
+  .sq-inline { width: 0.55rem; height: 0.55rem; border-radius: 1px; display: inline-block; }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .grid-row { grid-template-columns: 1fr; }
+  }
+</style>

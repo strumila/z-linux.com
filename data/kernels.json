@@ -1,12 +1,12 @@
 {
-  "fetchedAt": "2026-05-10T21:08:14.695Z",
+  "fetchedAt": "2026-05-10T22:06:55.469Z",
   "latest_stable": "7.0.5",
   "kernels": [
     {
-      "version": "7.1-rc2",
+      "version": "7.1-rc3",
       "moniker": "mainline",
-      "released": "2026-05-03",
-      "daysAgo": 7,
+      "released": "2026-05-10",
+      "daysAgo": 0,
       "iseol": false
     },
     {

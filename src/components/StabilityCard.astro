@@ -27,7 +27,8 @@ const pathD = points.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + '
 const areaD = pathD + ` L${SPARK_W - pad} ${SPARK_H - pad} L${pad} ${SPARK_H - pad} Z`;
 const [lastX, lastY] = points[points.length - 1];
 
-const subfactorOrder = ['security', 'regression', 'cadence'];
+const subfactorOrder = ['security', 'regression', 'cadence', 'test_health']
+  .filter(sf => subfactors[sf]);
 ---
 <article class="stability">
   <div class="head">

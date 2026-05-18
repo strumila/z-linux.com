@@ -16,23 +16,28 @@ function band(score) {
   return                    { label: 'critical', color: '#e85b4a' };
 }
 
-const SUBFACTOR_ORDER = ['security', 'regression', 'cadence'];
+const SUBFACTOR_ORDER = ['security', 'regression', 'cadence', 'test_health'];
 const SUBFACTOR_BLURB = {
-  security:   'Observable security pressure in the rolling window — CVE volume, severity, and topical spread.',
-  regression: 'Commit-stream turbulence — reverts, Fixes: trailers, and daily-count variance.',
-  cadence:    'Release-lifecycle signals — release age, LTS EOL distance, stable-line age.',
+  security:    'Observable security pressure in the rolling window — CVE volume, severity, and topical spread.',
+  regression:  'Commit-stream turbulence — reverts, Fixes: trailers, daily-count variance, churn concentration, and regzbot open-report rate.',
+  cadence:     'Release-lifecycle signals — release age, LTS EOL distance, stable-line age.',
+  test_health: 'KernelCI test pass rates — builds, boots, and functional suites across trees and arches.',
 };
 const INDICATOR_LABELS = {
-  cve_intensity:          'CVE intensity (Σ severity)',
-  cve_high_count:         'CVE high count',
-  cve_dispersion:         'CVE subsystem dispersion',
-  revert_rate:            'Revert rate',
-  fixes_density:          'Fixes: trailer density',
-  commit_variance:        'Commit-count variance',
-  churn_concentration:    'Churn concentration (Gini)',
-  point_release_age_days: 'Days since last point release',
-  lts_eol_distance_days:  'LTS EOL distance (max)',
-  stable_line_age_days:   'Stable-line age (placeholder)',
+  cve_intensity:            'CVE intensity (Σ severity)',
+  cve_high_count:           'CVE high count',
+  cve_dispersion:           'CVE subsystem dispersion',
+  revert_rate:              'Revert rate',
+  fixes_density:            'Fixes: trailer density',
+  commit_variance:          'Commit-count variance',
+  churn_concentration:      'Churn concentration (Gini)',
+  regression_reports_rate:  'regzbot open / commits',
+  point_release_age_days:   'Days since last point release',
+  lts_eol_distance_days:    'LTS EOL distance (max)',
+  stable_line_age_days:     'Stable-line age (placeholder)',
+  build_pass_rate:          'CI build pass rate',
+  boot_pass_rate:           'CI boot pass rate',
+  functional_pass_rate:     'CI functional pass rate',
 };
 
 function sparkline(W, H, pad, vals) {
@@ -267,8 +272,8 @@ const subCards = SUBFACTOR_ORDER.map(sf => {
 
   .subfactor-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
     margin-bottom: 1rem;
   }
   .sf-card {
@@ -430,6 +435,9 @@ const subCards = SUBFACTOR_ORDER.map(sf => {
 
   @media (max-width: 900px) {
     .subfactor-row { grid-template-columns: 1fr; }
+    @media (min-width: 600px) and (max-width: 900px) {
+      .subfactor-row { grid-template-columns: repeat(2, 1fr); }
+    }
     .hero { grid-template-columns: 1fr; gap: 1rem; }
     .hero-score {
       padding-right: 0;

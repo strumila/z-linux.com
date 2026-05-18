@@ -1,0 +1,81 @@
+{
+  "_dummy": true,
+  "fetchedAt": "2026-05-18T03:45:00.000Z",
+  "source": "kernelci.org",
+  "window": {
+    "since": "2026-05-11",
+    "until": "2026-05-18",
+    "totalBuilds": 12847,
+    "totalBoots": 9412,
+    "totalFunctional": 6182
+  },
+  "passRates": {
+    "build":      0.962,
+    "boot":       0.948,
+    "functional": 0.917,
+    "overall":    0.942,
+    "note": "passRates feed three indicators under the new `test_health` subfactor. Higher is more stable; theoretical loadings all +1.0."
+  },
+  "byTree": [
+    { "tree": "master",          "builds": 1842, "buildPass": 0.971, "boots": 1320, "bootPass": 0.952, "functional": 894, "functionalPass": 0.913 },
+    { "tree": "linux-next",      "builds": 2104, "buildPass": 0.943, "boots": 1510, "bootPass": 0.928, "functional":   0, "functionalPass": null },
+    { "tree": "linux-6.19.y",    "builds": 1213, "buildPass": 0.978, "boots":  894, "bootPass": 0.964, "functional": 612, "functionalPass": 0.938 },
+    { "tree": "linux-6.18.y",    "builds": 1187, "buildPass": 0.983, "boots":  882, "bootPass": 0.972, "functional": 604, "functionalPass": 0.947 },
+    { "tree": "linux-6.12.y",    "builds": 1102, "buildPass": 0.986, "boots":  814, "bootPass": 0.978, "functional": 561, "functionalPass": 0.953 },
+    { "tree": "linux-6.6.y",     "builds":  908, "buildPass": 0.990, "boots":  672, "bootPass": 0.982, "functional": 451, "functionalPass": 0.961 },
+    { "tree": "linux-6.1.y",     "builds":  802, "buildPass": 0.992, "boots":  594, "bootPass": 0.987, "functional": 401, "functionalPass": 0.968 },
+    { "tree": "linux-5.15.y",    "builds":  712, "buildPass": 0.994, "boots":  528, "bootPass": 0.991, "functional": 354, "functionalPass": 0.974 },
+    { "tree": "linux-5.10.y",    "builds":  605, "buildPass": 0.996, "boots":  448, "bootPass": 0.993, "functional": 301, "functionalPass": 0.981 },
+    { "tree": "tip/tip",         "builds":  642, "buildPass": 0.928, "boots":  462, "bootPass": 0.901, "functional": 312, "functionalPass": 0.872 },
+    { "tree": "net-next",        "builds": 1062, "buildPass": 0.937, "boots":  761, "bootPass": 0.919, "functional": 514, "functionalPass": 0.891 },
+    { "tree": "rust-next",       "builds":  428, "buildPass": 0.912, "boots":  308, "bootPass": 0.886, "functional": 178, "functionalPass": 0.843 }
+  ],
+  "byArch": [
+    { "arch": "x86_64",  "builds": 4218, "buildPass": 0.973, "bootPass": 0.961 },
+    { "arch": "arm64",   "builds": 3104, "buildPass": 0.968, "bootPass": 0.954 },
+    { "arch": "arm",     "builds": 1782, "buildPass": 0.957, "bootPass": 0.939 },
+    { "arch": "riscv64", "builds": 1248, "buildPass": 0.949, "bootPass": 0.927 },
+    { "arch": "powerpc", "builds":  912, "buildPass": 0.961, "bootPass": 0.946 },
+    { "arch": "s390x",   "builds":  704, "buildPass": 0.978, "bootPass": 0.971 },
+    { "arch": "mips",    "builds":  502, "buildPass": 0.934, "bootPass": 0.911 },
+    { "arch": "loongarch","builds": 377, "buildPass": 0.928, "bootPass": 0.903 }
+  ],
+  "recentFailures": [
+    {
+      "id": "kci-2026-05-17-1812",
+      "tree": "tip/tip",
+      "branch": "locking/core",
+      "kernelRev": "v7.0-rc-tip-locking-core-238",
+      "stage": "boot",
+      "arch": "arm64",
+      "platform": "rockchip-rk3588",
+      "failureClass": "watchdog-timeout",
+      "occurredAt": "2026-05-17T18:12:00Z",
+      "url": "https://kernelci.org/test/example1"
+    },
+    {
+      "id": "kci-2026-05-17-1602",
+      "tree": "linux-next",
+      "branch": "next-20260517",
+      "kernelRev": "next-20260517",
+      "stage": "functional",
+      "arch": "riscv64",
+      "platform": "sifive-unmatched",
+      "failureClass": "ltp-syscalls-clock_gettime",
+      "occurredAt": "2026-05-17T16:02:00Z",
+      "url": "https://kernelci.org/test/example2"
+    },
+    {
+      "id": "kci-2026-05-17-1133",
+      "tree": "rust-next",
+      "branch": "rust-next",
+      "kernelRev": "v7.0-rust-next-184",
+      "stage": "build",
+      "arch": "x86_64",
+      "platform": "(build only)",
+      "failureClass": "rustc-version-mismatch",
+      "occurredAt": "2026-05-17T11:33:00Z",
+      "url": "https://kernelci.org/test/example3"
+    }
+  ]
+}

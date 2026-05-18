@@ -11,7 +11,7 @@
   },
   "current": {
     "window_end": "2026-04-19",
-    "composite": 0.745,
+    "composite": 0.778,
     "subfactors": {
       "security": {
         "score": 0.682,
@@ -22,12 +22,13 @@
         }
       },
       "regression": {
-        "score": 0.738,
+        "score": 0.708,
         "indicators": {
           "revert_rate": 0.0037,
           "fixes_density": 0.0702,
           "commit_variance": 0.181,
-          "churn_concentration": 0.741
+          "churn_concentration": 0.741,
+          "regression_reports_rate": 0.0037
         }
       },
       "cadence": {
@@ -37,31 +38,41 @@
           "lts_eol_distance_days": 622,
           "stable_line_age_days": 180
         }
+      },
+      "test_health": {
+        "score": 0.905,
+        "indicators": {
+          "build_pass_rate": 0.962,
+          "boot_pass_rate": 0.948,
+          "functional_pass_rate": 0.917
+        }
       }
     }
   },
   "loadings": {
-    "security":   { "cve_intensity": -1.0, "cve_high_count": -1.0, "cve_dispersion":  0.0 },
-    "regression": { "revert_rate":   -1.0, "fixes_density":  -1.0, "commit_variance": -1.0, "churn_concentration": -1.0 },
-    "cadence":    { "point_release_age_days": -1.0, "lts_eol_distance_days": 1.0, "stable_line_age_days": 1.0 }
+    "security":    { "cve_intensity": -1.0, "cve_high_count": -1.0, "cve_dispersion":  0.0 },
+    "regression":  { "revert_rate":   -1.0, "fixes_density":  -1.0, "commit_variance": -1.0, "churn_concentration": -1.0, "regression_reports_rate": -1.0 },
+    "cadence":     { "point_release_age_days": -1.0, "lts_eol_distance_days": 1.0, "stable_line_age_days": 1.0 },
+    "test_health": { "build_pass_rate":  1.0, "boot_pass_rate":  1.0, "functional_pass_rate":  1.0 }
   },
   "hierarchy": {
-    "security":   0.3333,
-    "regression": 0.3333,
-    "cadence":    0.3333
+    "security":    0.25,
+    "regression":  0.25,
+    "cadence":     0.25,
+    "test_health": 0.25
   },
   "history": [
-    { "date": "2026-04-08", "composite": 0.708, "security_score": 0.639, "regression_score": 0.724, "cadence_score": 0.781 },
-    { "date": "2026-04-09", "composite": 0.722, "security_score": 0.651, "regression_score": 0.736, "cadence_score": 0.779 },
-    { "date": "2026-04-10", "composite": 0.696, "security_score": 0.602, "regression_score": 0.721, "cadence_score": 0.778 },
-    { "date": "2026-04-11", "composite": 0.681, "security_score": 0.578, "regression_score": 0.687, "cadence_score": 0.779 },
-    { "date": "2026-04-12", "composite": 0.720, "security_score": 0.624, "regression_score": 0.740, "cadence_score": 0.797 },
-    { "date": "2026-04-13", "composite": 0.737, "security_score": 0.647, "regression_score": 0.759, "cadence_score": 0.806 },
-    { "date": "2026-04-14", "composite": 0.690, "security_score": 0.554, "regression_score": 0.718, "cadence_score": 0.798 },
-    { "date": "2026-04-15", "composite": 0.712, "security_score": 0.600, "regression_score": 0.736, "cadence_score": 0.800 },
-    { "date": "2026-04-16", "composite": 0.730, "security_score": 0.624, "regression_score": 0.753, "cadence_score": 0.813 },
-    { "date": "2026-04-17", "composite": 0.752, "security_score": 0.661, "regression_score": 0.772, "cadence_score": 0.822 },
-    { "date": "2026-04-18", "composite": 0.741, "security_score": 0.658, "regression_score": 0.750, "cadence_score": 0.815 },
-    { "date": "2026-04-19", "composite": 0.745, "security_score": 0.682, "regression_score": 0.738, "cadence_score": 0.817 }
+    { "date": "2026-04-08", "composite": 0.745, "security_score": 0.639, "regression_score": 0.708, "cadence_score": 0.781, "test_health_score": 0.892 },
+    { "date": "2026-04-09", "composite": 0.752, "security_score": 0.651, "regression_score": 0.715, "cadence_score": 0.779, "test_health_score": 0.864 },
+    { "date": "2026-04-10", "composite": 0.728, "security_score": 0.602, "regression_score": 0.702, "cadence_score": 0.778, "test_health_score": 0.831 },
+    { "date": "2026-04-11", "composite": 0.722, "security_score": 0.578, "regression_score": 0.668, "cadence_score": 0.779, "test_health_score": 0.863 },
+    { "date": "2026-04-12", "composite": 0.753, "security_score": 0.624, "regression_score": 0.718, "cadence_score": 0.797, "test_health_score": 0.872 },
+    { "date": "2026-04-13", "composite": 0.768, "security_score": 0.647, "regression_score": 0.730, "cadence_score": 0.806, "test_health_score": 0.888 },
+    { "date": "2026-04-14", "composite": 0.722, "security_score": 0.554, "regression_score": 0.691, "cadence_score": 0.798, "test_health_score": 0.844 },
+    { "date": "2026-04-15", "composite": 0.751, "security_score": 0.600, "regression_score": 0.712, "cadence_score": 0.800, "test_health_score": 0.892 },
+    { "date": "2026-04-16", "composite": 0.762, "security_score": 0.624, "regression_score": 0.725, "cadence_score": 0.813, "test_health_score": 0.886 },
+    { "date": "2026-04-17", "composite": 0.781, "security_score": 0.661, "regression_score": 0.748, "cadence_score": 0.822, "test_health_score": 0.892 },
+    { "date": "2026-04-18", "composite": 0.766, "security_score": 0.658, "regression_score": 0.720, "cadence_score": 0.815, "test_health_score": 0.871 },
+    { "date": "2026-04-19", "composite": 0.778, "security_score": 0.682, "regression_score": 0.708, "cadence_score": 0.817, "test_health_score": 0.905 }
   ]
 }

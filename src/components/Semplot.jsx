@@ -2,19 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
 const INDICATOR_LABELS = {
-  cve_intensity:          'CVE intensity',
-  cve_high_count:         'CVE high',
-  cve_dispersion:         'CVE disp.',
-  revert_rate:            'revert rate',
-  fixes_density:          'Fixes: dens.',
-  commit_variance:        'commit var.',
-  churn_concentration:    'churn conc.',
-  point_release_age_days: 'release age',
-  lts_eol_distance_days:  'LTS EOL',
-  stable_line_age_days:   'line age',
+  cve_intensity:            'CVE intensity',
+  cve_high_count:           'CVE high',
+  cve_dispersion:           'CVE disp.',
+  revert_rate:              'revert rate',
+  fixes_density:            'Fixes: dens.',
+  commit_variance:          'commit var.',
+  churn_concentration:      'churn conc.',
+  regression_reports_rate:  'regz rate',
+  point_release_age_days:   'release age',
+  lts_eol_distance_days:    'LTS EOL',
+  stable_line_age_days:     'line age',
+  build_pass_rate:          'build pass',
+  boot_pass_rate:           'boot pass',
+  functional_pass_rate:     'func pass',
 };
 
-const SUBFACTOR_ORDER = ['security', 'regression', 'cadence'];
+const SUBFACTOR_ORDER = ['security', 'regression', 'cadence', 'test_health'];
 
 function formatValue(v) {
   if (typeof v !== 'number') return String(v);
@@ -36,10 +40,15 @@ export default function Semplot({ data }) {
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    const W = 820, H = 480;
+    const W = 1000, H = 480;
     svg.attr('viewBox', `0 0 ${W} ${H}`);
 
     const { current, loadings, hierarchy } = data;
+
+    const presentSubfactors = SUBFACTOR_ORDER.filter(sf => current.subfactors[sf]);
+    const nSub = presentSubfactors.length;
+    const subSpacing = (W - 400) / Math.max(nSub - 1, 1);
+    const subX = presentSubfactors.map((_, i) => 200 + i * subSpacing);
 
     const nodes = [];
     nodes.push({
@@ -50,8 +59,7 @@ export default function Semplot({ data }) {
       y: 70,
       value: current.composite,
     });
-    const subX = [200, W / 2, W - 200];
-    SUBFACTOR_ORDER.forEach((sf, i) => {
+    presentSubfactors.forEach((sf, i) => {
       nodes.push({
         id: sf,
         kind: 'latent',
@@ -61,11 +69,13 @@ export default function Semplot({ data }) {
         value: current.subfactors[sf].score,
       });
     });
-    SUBFACTOR_ORDER.forEach((sf, sIdx) => {
+    presentSubfactors.forEach((sf, sIdx) => {
       const inds = Object.keys(current.subfactors[sf].indicators);
       const count = inds.length;
-      const spacing = count <= 3 ? 90 : 60;
-      const rectWidth = count <= 3 ? 84 : 64;
+      // Tighter spacing the more indicators in a subfactor, so rectangles don't
+      // collide with the neighbouring subfactor's children.
+      const spacing   = count >= 5 ? 38 : count === 4 ? 48 : 60;
+      const rectWidth = count >= 5 ? 44 : count === 4 ? 50 : 56;
       inds.forEach((ind, iIdx) => {
         const offset = (iIdx - (count - 1) / 2) * spacing;
         nodes.push({
@@ -84,10 +94,10 @@ export default function Semplot({ data }) {
     });
 
     const edges = [];
-    SUBFACTOR_ORDER.forEach(sf => {
+    presentSubfactors.forEach(sf => {
       edges.push({ source: 'stability', target: sf, loading: hierarchy[sf], id: `stability->${sf}` });
     });
-    SUBFACTOR_ORDER.forEach(sf => {
+    presentSubfactors.forEach(sf => {
       Object.keys(current.subfactors[sf].indicators).forEach(ind => {
         edges.push({
           source: sf,
@@ -205,6 +215,8 @@ export default function Semplot({ data }) {
           .text(n.value.toFixed(3));
       } else {
         const half = n.rectWidth / 2;
+        const labelFont = n.rectWidth < 50 ? 8.5 : n.rectWidth < 60 ? 9.5 : 10;
+        const valueFont = n.rectWidth < 50 ? 8   : n.rectWidth < 60 ? 8.5 : 9;
         g.append('rect')
           .attr('x', -half).attr('y', -15)
           .attr('width', n.rectWidth).attr('height', 30)
@@ -216,7 +228,7 @@ export default function Semplot({ data }) {
           .attr('text-anchor', 'middle')
           .attr('dy', '-0.15em')
           .attr('font-family', 'ui-monospace, SFMono-Regular, monospace')
-          .attr('font-size', 10)
+          .attr('font-size', labelFont)
           .attr('fill', '#222')
           .attr('pointer-events', 'none')
           .text(n.label);
@@ -224,7 +236,7 @@ export default function Semplot({ data }) {
           .attr('text-anchor', 'middle')
           .attr('dy', '1em')
           .attr('font-family', 'ui-monospace, SFMono-Regular, monospace')
-          .attr('font-size', 9)
+          .attr('font-size', valueFont)
           .attr('fill', 'rgba(0,0,0,0.55)')
           .attr('pointer-events', 'none')
           .text(formatValue(n.value));

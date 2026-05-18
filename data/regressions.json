@@ -1,0 +1,144 @@
+{
+  "_dummy": true,
+  "fetchedAt": "2026-05-18T03:30:00.000Z",
+  "source": "regzbot (linux-regtracking.leemhuis.info)",
+  "window": {
+    "since": "2026-04-18",
+    "until": "2026-05-18",
+    "totalReports": 47,
+    "openReports": 18,
+    "fixedReports": 24,
+    "wontfixOrInvalid": 5
+  },
+  "byStatus": [
+    { "status": "new",           "count": 6 },
+    { "status": "confirmed",     "count": 8 },
+    { "status": "investigating", "count": 4 },
+    { "status": "fixed",         "count": 24 },
+    { "status": "wontfix",       "count": 3 },
+    { "status": "invalid",       "count": 2 }
+  ],
+  "bySubsystem": [
+    { "subsystem": "drivers",  "open": 7, "total": 18 },
+    { "subsystem": "net",      "open": 3, "total":  9 },
+    { "subsystem": "fs",       "open": 2, "total":  6 },
+    { "subsystem": "mm",       "open": 2, "total":  4 },
+    { "subsystem": "kernel",   "open": 1, "total":  3 },
+    { "subsystem": "block",    "open": 1, "total":  3 },
+    { "subsystem": "io_uring", "open": 1, "total":  2 },
+    { "subsystem": "sound",    "open": 1, "total":  2 }
+  ],
+  "byLine": [
+    { "line": "7.0",  "open": 9, "total": 22 },
+    { "line": "6.19", "open": 5, "total": 14 },
+    { "line": "6.18", "open": 2, "total":  6 },
+    { "line": "6.12", "open": 1, "total":  3 },
+    { "line": "6.6",  "open": 1, "total":  2 }
+  ],
+  "recent": [
+    {
+      "id": "regzbot-0047",
+      "title": "drivers/net/wireless/mt76: occasional kernel oops on roaming",
+      "reporter": "Linus Sandgren",
+      "reportedAt": "2026-05-17T14:22:00Z",
+      "status": "new",
+      "subsystem": "drivers",
+      "regressedOn": "7.0",
+      "lastWorking": "6.19",
+      "lastActivity": "2026-05-17T14:22:00Z",
+      "url": "https://lore.kernel.org/regressions/example1"
+    },
+    {
+      "id": "regzbot-0046",
+      "title": "fs/btrfs: scrub stalls under heavy concurrent writes (since 7.0)",
+      "reporter": "M. Hayashi",
+      "reportedAt": "2026-05-16T08:11:00Z",
+      "status": "confirmed",
+      "subsystem": "fs",
+      "regressedOn": "7.0",
+      "lastWorking": "6.19.10",
+      "lastActivity": "2026-05-17T19:48:00Z",
+      "url": "https://lore.kernel.org/regressions/example2"
+    },
+    {
+      "id": "regzbot-0045",
+      "title": "io_uring: occasional EAGAIN on submit_and_wait with deep queues",
+      "reporter": "P. Konstantinov",
+      "reportedAt": "2026-05-15T11:54:00Z",
+      "status": "investigating",
+      "subsystem": "io_uring",
+      "regressedOn": "7.0",
+      "lastWorking": "6.19",
+      "lastActivity": "2026-05-18T02:14:00Z",
+      "url": "https://lore.kernel.org/regressions/example3"
+    },
+    {
+      "id": "regzbot-0044",
+      "title": "mm: oom_killer no longer respects cgroup memory.high after rebalance",
+      "reporter": "J. Rasmussen",
+      "reportedAt": "2026-05-14T19:33:00Z",
+      "status": "confirmed",
+      "subsystem": "mm",
+      "regressedOn": "7.0-rc6",
+      "lastWorking": "6.19",
+      "lastActivity": "2026-05-17T07:21:00Z",
+      "url": "https://lore.kernel.org/regressions/example4"
+    },
+    {
+      "id": "regzbot-0043",
+      "title": "drivers/gpu/drm/amd: KMS hang on display hotplug since 7.0-rc5",
+      "reporter": "T. Andersson",
+      "reportedAt": "2026-05-13T22:08:00Z",
+      "status": "confirmed",
+      "subsystem": "drivers",
+      "regressedOn": "7.0",
+      "lastWorking": "6.19.5",
+      "lastActivity": "2026-05-16T15:42:00Z",
+      "url": "https://lore.kernel.org/regressions/example5"
+    },
+    {
+      "id": "regzbot-0042",
+      "title": "net/sched: tc qdisc add fails with new error code in 7.0",
+      "reporter": "A. Müller",
+      "reportedAt": "2026-05-12T10:05:00Z",
+      "status": "new",
+      "subsystem": "net",
+      "regressedOn": "7.0",
+      "lastWorking": "6.19",
+      "lastActivity": "2026-05-12T10:05:00Z",
+      "url": "https://lore.kernel.org/regressions/example6"
+    },
+    {
+      "id": "regzbot-0041",
+      "title": "block/bcachefs: snapshot deletion deadlocks under fio mixed-rw",
+      "reporter": "K. Sato",
+      "reportedAt": "2026-05-11T16:39:00Z",
+      "status": "investigating",
+      "subsystem": "block",
+      "regressedOn": "7.0",
+      "lastWorking": "6.19",
+      "lastActivity": "2026-05-15T11:02:00Z",
+      "url": "https://lore.kernel.org/regressions/example7"
+    },
+    {
+      "id": "regzbot-0040",
+      "title": "kernel/sched: EEVDF starvation under nice=19 + cgroup weight",
+      "reporter": "R. Vasquez",
+      "reportedAt": "2026-05-09T08:00:00Z",
+      "status": "fixed",
+      "subsystem": "kernel",
+      "regressedOn": "6.19",
+      "lastWorking": "6.18",
+      "lastActivity": "2026-05-16T17:08:00Z",
+      "fixedIn": ["7.0", "6.19.10"],
+      "url": "https://lore.kernel.org/regressions/example8"
+    }
+  ],
+  "metrics": {
+    "openReportsPer1kCommits": 3.7,
+    "medianTimeToFixDays": 18,
+    "p90TimeToFixDays": 54,
+    "openReportsRollingTrend": "rising",
+    "note": "openReportsPer1kCommits is the input to the regression subfactor as `regression_reports_rate`. Lower is more stable; theoretical loading -1.0."
+  }
+}

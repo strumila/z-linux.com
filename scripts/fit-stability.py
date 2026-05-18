@@ -32,18 +32,24 @@ THEORETICAL_LOADINGS = {
         'cve_dispersion':  0.0,
     },
     'regression': {
-        'revert_rate':         -1.0,
-        'fixes_density':       -1.0,
-        'commit_variance':     -1.0,
-        'churn_concentration': -1.0,
+        'revert_rate':              -1.0,
+        'fixes_density':            -1.0,
+        'commit_variance':          -1.0,
+        'churn_concentration':      -1.0,
+        'regression_reports_rate':  -1.0,
     },
     'cadence': {
         'point_release_age_days':  -1.0,
         'lts_eol_distance_days':    1.0,
         'stable_line_age_days':     1.0,
     },
+    'test_health': {
+        'build_pass_rate':       1.0,
+        'boot_pass_rate':        1.0,
+        'functional_pass_rate':  1.0,
+    },
 }
-HIERARCHY = {'security': 1/3, 'regression': 1/3, 'cadence': 1/3}
+HIERARCHY = {'security': 0.25, 'regression': 0.25, 'cadence': 0.25, 'test_health': 0.25}
 
 
 def load_json(name):
@@ -52,16 +58,25 @@ def load_json(name):
 
 
 def compute_indicators():
-    commits = load_json('commits.json') or {}
-    cves    = load_json('cves.json')    or {}
-    kernels = load_json('kernels.json') or {}
-    lts_eol = (load_json('lts-eol.json') or {}).get('eol', {})
+    commits     = load_json('commits.json')     or {}
+    cves        = load_json('cves.json')        or {}
+    kernels     = load_json('kernels.json')     or {}
+    lts_eol     = (load_json('lts-eol.json')    or {}).get('eol', {})
+    regressions = load_json('regressions.json') or {}
+    kci         = load_json('kernel-ci.json')   or {}
 
     window = commits.get('window', {})
     total_commits = max(window.get('totalCommits', 1), 1)
     total_reverts = window.get('totalReverts', 0)
     total_fixes   = window.get('totalFixes', 0)
     churn_concentration = window.get('churnConcentration', 0.0)
+    # regression_reports_rate: open reports per commit in window (small fraction, lower is better).
+    regression_reports_rate = (regressions.get('window', {}).get('openReports', 0)
+                               / total_commits)
+    pass_rates = kci.get('passRates', {})
+    build_pass_rate      = pass_rates.get('build', 0.0)
+    boot_pass_rate       = pass_rates.get('boot', 0.0)
+    functional_pass_rate = pass_rates.get('functional', 0.0)
 
     counts = [d['commits'] for d in commits.get('daily', [])]
     mean = sum(counts) / len(counts) if counts else 1
@@ -99,15 +114,21 @@ def compute_indicators():
             'cve_dispersion': cve_dispersion,
         },
         'regression': {
-            'revert_rate':         total_reverts / total_commits,
-            'fixes_density':       total_fixes   / total_commits,
-            'commit_variance':     cv,
-            'churn_concentration': churn_concentration,
+            'revert_rate':              total_reverts / total_commits,
+            'fixes_density':            total_fixes   / total_commits,
+            'commit_variance':          cv,
+            'churn_concentration':      churn_concentration,
+            'regression_reports_rate':  regression_reports_rate,
         },
         'cadence': {
             'point_release_age_days': point_release_age,
             'lts_eol_distance_days':  lts_eol_distance,
             'stable_line_age_days':   stable_line_age,
+        },
+        'test_health': {
+            'build_pass_rate':       build_pass_rate,
+            'boot_pass_rate':        boot_pass_rate,
+            'functional_pass_rate':  functional_pass_rate,
         },
     }
 
@@ -176,7 +197,7 @@ def try_fit(history, indicator_names):
         if len(cols) < 2:
             return None
         parts.append(f'{sf} =~ ' + ' + '.join(cols))
-    parts.append('stability =~ security + regression + cadence')
+    parts.append('stability =~ security + regression + cadence + test_health')
     model_desc = '\n'.join(parts)
 
     try:

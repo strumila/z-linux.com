@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-05-22T12:01:23.252Z",
+  "fetchedAt": "2026-05-22T15:26:11.350Z",
   "latest_stable": "7.0.9",
   "kernels": [
     {
@@ -15,13 +15,6 @@
       "released": "2026-05-17",
       "daysAgo": 5,
       "iseol": false
-    },
-    {
-      "version": "6.19.14",
-      "moniker": "stable",
-      "released": "2026-04-22",
-      "daysAgo": 30,
-      "iseol": true
     },
     {
       "version": "6.18.32",
@@ -66,10 +59,10 @@
       "iseol": false
     },
     {
-      "version": "next-20260521",
+      "version": "next-20260522",
       "moniker": "linux-next",
-      "released": "2026-05-21",
-      "daysAgo": 1,
+      "released": "2026-05-22",
+      "daysAgo": 0,
       "iseol": false
     }
   ]

@@ -1,6 +1,6 @@
 {
-  "fetchedAt": "2026-06-19T07:31:18.372Z",
-  "latest_stable": "7.1",
+  "fetchedAt": "2026-06-19T12:18:52.667Z",
+  "latest_stable": "7.1.1",
   "kernels": [
     {
       "version": "7.1",
@@ -10,52 +10,59 @@
       "iseol": false
     },
     {
-      "version": "7.0.12",
+      "version": "7.1.1",
       "moniker": "stable",
-      "released": "2026-06-09",
-      "daysAgo": 10,
+      "released": "2026-06-19",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.18.35",
-      "moniker": "longterm",
-      "released": "2026-06-09",
-      "daysAgo": 10,
+      "version": "7.0.13",
+      "moniker": "stable",
+      "released": "2026-06-19",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.12.93",
+      "version": "6.18.36",
       "moniker": "longterm",
-      "released": "2026-06-09",
-      "daysAgo": 10,
+      "released": "2026-06-19",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.6.142",
+      "version": "6.12.94",
       "moniker": "longterm",
-      "released": "2026-06-01",
-      "daysAgo": 18,
+      "released": "2026-06-19",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.1.175",
+      "version": "6.6.143",
       "moniker": "longterm",
-      "released": "2026-06-01",
-      "daysAgo": 18,
+      "released": "2026-06-19",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.15.209",
+      "version": "6.1.176",
       "moniker": "longterm",
-      "released": "2026-06-01",
-      "daysAgo": 18,
+      "released": "2026-06-19",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.10.258",
+      "version": "5.15.210",
       "moniker": "longterm",
-      "released": "2026-06-01",
-      "daysAgo": 18,
+      "released": "2026-06-19",
+      "daysAgo": 0,
+      "iseol": false
+    },
+    {
+      "version": "5.10.259",
+      "moniker": "longterm",
+      "released": "2026-06-19",
+      "daysAgo": 0,
       "iseol": false
     },
     {

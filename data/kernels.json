@@ -1,6 +1,6 @@
 {
-  "fetchedAt": "2026-07-04T16:17:15.723Z",
-  "latest_stable": "6.17.13",
+  "fetchedAt": "2026-07-04T18:14:42.392Z",
+  "latest_stable": "6.19.14",
   "kernels": [
     {
       "version": "7.2-rc1",
@@ -10,17 +10,17 @@
       "iseol": false
     },
     {
-      "version": "6.17.13",
+      "version": "6.19.14",
       "moniker": "stable",
-      "released": "2025-12-18",
-      "daysAgo": 198,
+      "released": "2026-04-22",
+      "daysAgo": 73,
       "iseol": false
     },
     {
-      "version": "6.18.27",
+      "version": "6.18.37",
       "moniker": "longterm",
-      "released": "2026-05-07",
-      "daysAgo": 58,
+      "released": "2026-06-27",
+      "daysAgo": 7,
       "iseol": false
     },
     {

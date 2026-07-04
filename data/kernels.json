@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-07-04T18:14:42.392Z",
+  "fetchedAt": "2026-07-04T19:40:25.055Z",
   "latest_stable": "6.19.14",
   "kernels": [
     {
@@ -28,6 +28,13 @@
       "moniker": "longterm",
       "released": "2026-06-19",
       "daysAgo": 15,
+      "iseol": false
+    },
+    {
+      "version": "6.6.125",
+      "moniker": "longterm",
+      "released": "2026-02-16",
+      "daysAgo": 138,
       "iseol": false
     },
     {

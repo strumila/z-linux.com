@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-07-24T11:56:56.513Z",
+  "fetchedAt": "2026-07-24T14:15:35.673Z",
   "latest_stable": "7.1.4",
   "kernels": [
     {
@@ -45,24 +45,24 @@
       "iseol": false
     },
     {
-      "version": "6.1.177",
+      "version": "6.1.178",
       "moniker": "longterm",
-      "released": "2026-07-04",
-      "daysAgo": 20,
+      "released": "2026-07-24",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.15.211",
+      "version": "5.15.212",
       "moniker": "longterm",
-      "released": "2026-07-04",
-      "daysAgo": 20,
+      "released": "2026-07-24",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.10.260",
+      "version": "5.10.261",
       "moniker": "longterm",
-      "released": "2026-07-04",
-      "daysAgo": 20,
+      "released": "2026-07-24",
+      "daysAgo": 0,
       "iseol": false
     },
     {

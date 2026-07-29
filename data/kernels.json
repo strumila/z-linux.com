@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-07-29T15:21:45.419Z",
+  "fetchedAt": "2026-07-29T17:40:40.664Z",
   "latest_stable": "7.1.5",
   "kernels": [
     {
@@ -24,24 +24,24 @@
       "iseol": false
     },
     {
-      "version": "6.12.98",
+      "version": "6.12.99",
       "moniker": "longterm",
-      "released": "2026-07-25",
-      "daysAgo": 4,
+      "released": "2026-07-29",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.6.145",
+      "version": "6.6.146",
       "moniker": "longterm",
-      "released": "2026-07-24",
-      "daysAgo": 5,
+      "released": "2026-07-29",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.1.178",
+      "version": "6.1.179",
       "moniker": "longterm",
-      "released": "2026-07-24",
-      "daysAgo": 5,
+      "released": "2026-07-29",
+      "daysAgo": 0,
       "iseol": false
     },
     {
@@ -59,10 +59,10 @@
       "iseol": false
     },
     {
-      "version": "next-20260728",
+      "version": "next-20260729",
       "moniker": "linux-next",
-      "released": "2026-07-28",
-      "daysAgo": 1,
+      "released": "2026-07-29",
+      "daysAgo": 0,
       "iseol": false
     }
   ]

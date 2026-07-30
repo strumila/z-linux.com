@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-07-30T09:44:41.221Z",
+  "fetchedAt": "2026-07-30T12:05:51.860Z",
   "latest_stable": "7.1.5",
   "kernels": [
     {
@@ -17,45 +17,45 @@
       "iseol": false
     },
     {
-      "version": "6.18.40",
+      "version": "6.18.41",
       "moniker": "longterm",
-      "released": "2026-07-24",
-      "daysAgo": 6,
+      "released": "2026-07-30",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.12.99",
+      "version": "6.12.100",
       "moniker": "longterm",
-      "released": "2026-07-29",
-      "daysAgo": 1,
+      "released": "2026-07-30",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.6.146",
+      "version": "6.6.147",
       "moniker": "longterm",
-      "released": "2026-07-29",
-      "daysAgo": 1,
+      "released": "2026-07-30",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.1.179",
+      "version": "6.1.180",
       "moniker": "longterm",
-      "released": "2026-07-29",
-      "daysAgo": 1,
+      "released": "2026-07-30",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.15.212",
+      "version": "5.15.213",
       "moniker": "longterm",
-      "released": "2026-07-24",
-      "daysAgo": 6,
+      "released": "2026-07-30",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.10.261",
+      "version": "5.10.262",
       "moniker": "longterm",
-      "released": "2026-07-24",
-      "daysAgo": 6,
+      "released": "2026-07-30",
+      "daysAgo": 0,
       "iseol": false
     },
     {

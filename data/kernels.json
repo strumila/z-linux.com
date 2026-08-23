@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-08-23T13:04:36.479Z",
+  "fetchedAt": "2026-08-23T13:47:16.397Z",
   "latest_stable": "7.2",
   "kernels": [
     {
@@ -10,10 +10,10 @@
       "iseol": false
     },
     {
-      "version": "7.1.9",
+      "version": "7.1.10",
       "moniker": "stable",
-      "released": "2026-08-19",
-      "daysAgo": 4,
+      "released": "2026-08-23",
+      "daysAgo": 0,
       "iseol": false
     },
     {

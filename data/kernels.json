@@ -1,6 +1,6 @@
 {
-  "fetchedAt": "2026-08-27T09:56:26.876Z",
-  "latest_stable": "7.2",
+  "fetchedAt": "2026-08-27T20:34:10.389Z",
+  "latest_stable": "7.2.1",
   "kernels": [
     {
       "version": "7.2",
@@ -10,59 +10,66 @@
       "iseol": false
     },
     {
-      "version": "7.1.10",
+      "version": "7.2.1",
       "moniker": "stable",
-      "released": "2026-08-23",
-      "daysAgo": 4,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.18.46",
+      "version": "7.1.11",
+      "moniker": "stable",
+      "released": "2026-08-27",
+      "daysAgo": 0,
+      "iseol": false
+    },
+    {
+      "version": "6.18.47",
       "moniker": "longterm",
-      "released": "2026-08-23",
-      "daysAgo": 4,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.12.105",
+      "version": "6.12.106",
       "moniker": "longterm",
-      "released": "2026-08-23",
-      "daysAgo": 4,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.6.153",
+      "version": "6.6.154",
       "moniker": "longterm",
-      "released": "2026-08-23",
-      "daysAgo": 4,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.1.184",
+      "version": "6.1.185",
       "moniker": "longterm",
-      "released": "2026-08-23",
-      "daysAgo": 4,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.15.217",
+      "version": "5.15.218",
       "moniker": "longterm",
-      "released": "2026-08-23",
-      "daysAgo": 4,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "5.10.266",
+      "version": "5.10.267",
       "moniker": "longterm",
-      "released": "2026-08-23",
-      "daysAgo": 4,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "next-20260826",
+      "version": "next-20260827",
       "moniker": "linux-next",
-      "released": "2026-08-26",
-      "daysAgo": 1,
+      "released": "2026-08-27",
+      "daysAgo": 0,
       "iseol": false
     }
   ]

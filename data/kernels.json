@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-10-12T09:20:55.274Z",
+  "fetchedAt": "2026-10-12T19:50:56.877Z",
   "latest_stable": "7.2.10",
   "kernels": [
     {
@@ -59,10 +59,10 @@
       "iseol": false
     },
     {
-      "version": "next-20261009",
+      "version": "next-20261012",
       "moniker": "linux-next",
-      "released": "2026-10-10",
-      "daysAgo": 2,
+      "released": "2026-10-12",
+      "daysAgo": 0,
       "iseol": false
     }
   ]

@@ -1,68 +1,68 @@
 {
-  "fetchedAt": "2026-10-19T22:25:48.680Z",
+  "fetchedAt": "2026-10-20T01:53:00.749Z",
   "latest_stable": "7.3",
   "kernels": [
     {
       "version": "7.3",
       "moniker": "mainline",
       "released": "2026-10-18",
-      "daysAgo": 1,
+      "daysAgo": 2,
       "iseol": false
     },
     {
       "version": "7.2.11",
       "moniker": "stable",
       "released": "2026-10-15",
-      "daysAgo": 4,
+      "daysAgo": 5,
       "iseol": false
     },
     {
       "version": "6.18.57",
       "moniker": "longterm",
       "released": "2026-10-15",
-      "daysAgo": 4,
+      "daysAgo": 5,
       "iseol": false
     },
     {
       "version": "6.12.113",
       "moniker": "longterm",
       "released": "2026-10-15",
-      "daysAgo": 4,
+      "daysAgo": 5,
       "iseol": false
     },
     {
       "version": "6.6.159",
       "moniker": "longterm",
       "released": "2026-10-15",
-      "daysAgo": 4,
+      "daysAgo": 5,
       "iseol": false
     },
     {
       "version": "6.1.190",
       "moniker": "longterm",
       "released": "2026-10-15",
-      "daysAgo": 4,
+      "daysAgo": 5,
       "iseol": false
     },
     {
       "version": "5.15.223",
       "moniker": "longterm",
       "released": "2026-10-15",
-      "daysAgo": 4,
+      "daysAgo": 5,
       "iseol": false
     },
     {
       "version": "5.10.272",
       "moniker": "longterm",
       "released": "2026-10-15",
-      "daysAgo": 4,
+      "daysAgo": 5,
       "iseol": false
     },
     {
       "version": "next-20261019",
       "moniker": "linux-next",
       "released": "2026-10-19",
-      "daysAgo": 0,
+      "daysAgo": 1,
       "iseol": false
     }
   ]

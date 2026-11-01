@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-11-01T10:36:04.297Z",
+  "fetchedAt": "2026-11-01T17:09:12.838Z",
   "latest_stable": "7.3.1",
   "kernels": [
     {
@@ -17,11 +17,11 @@
       "iseol": false
     },
     {
-      "version": "7.2.14",
+      "version": "7.2.15",
       "moniker": "stable",
-      "released": "2026-10-30",
-      "daysAgo": 2,
-      "iseol": false
+      "released": "2026-11-01",
+      "daysAgo": 0,
+      "iseol": true
     },
     {
       "version": "6.18.60",

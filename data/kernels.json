@@ -1,6 +1,6 @@
 {
-  "fetchedAt": "2026-11-17T04:36:26.181Z",
-  "latest_stable": "7.3.4",
+  "fetchedAt": "2026-11-17T14:34:33.660Z",
+  "latest_stable": "7.3.5",
   "kernels": [
     {
       "version": "7.4-rc3",
@@ -10,10 +10,10 @@
       "iseol": false
     },
     {
-      "version": "7.3.4",
+      "version": "7.3.5",
       "moniker": "stable",
-      "released": "2026-11-10",
-      "daysAgo": 7,
+      "released": "2026-11-17",
+      "daysAgo": 0,
       "iseol": false
     },
     {
@@ -24,17 +24,17 @@
       "iseol": true
     },
     {
-      "version": "6.18.63",
+      "version": "6.18.64",
       "moniker": "longterm",
-      "released": "2026-11-10",
-      "daysAgo": 7,
+      "released": "2026-11-17",
+      "daysAgo": 0,
       "iseol": false
     },
     {
-      "version": "6.12.117",
+      "version": "6.12.118",
       "moniker": "longterm",
-      "released": "2026-11-10",
-      "daysAgo": 7,
+      "released": "2026-11-17",
+      "daysAgo": 0,
       "iseol": false
     },
     {
